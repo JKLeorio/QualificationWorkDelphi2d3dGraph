@@ -1,5 +1,6 @@
 # Delphi project files to ignore
 
+
 # Binary and intermediate files
 *.exe
 *.dll

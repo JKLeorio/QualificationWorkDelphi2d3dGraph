@@ -191,19 +191,17 @@ procedure TForm1.CalculateAll(sender : Tobject);
                 end;
                 if MathExpressionCalc.CalcPointsByRange(rstart, rend, variables_dict, symbol, range.NameEdit.Text, parsed_data, points, parsed_data_copy) then
                   begin
-                    glClearColor(1, 1, 1, 1);
-                    glClear(GL_COLOR_BUFFER_BIT);
                     DrawCoordinate;
                     SetGLColor(clRed);
                     DrawGraph(points);
-                    SwapBuffers(wglGetCurrentDC);
                   end;
               end
               else
                 raise Exception.Create('range error');
             end;
-          end;
         end;
+    end;
+    SwapBuffers(wglGetCurrentDC);
   end;
 
 procedure CallArrange;
