@@ -1,0 +1,70 @@
+# Delphi project files to ignore
+
+# Binary and intermediate files
+*.exe
+*.dll
+*.dcu
+*.bpl
+*.dcp
+*.dsk
+*.local
+*.identcache
+*.rsm
+*.map
+*.stat
+*.tvsconfig
+*.tvsconfiglayout
+*.otares
+
+# Backup and temp files
+*.~*
+*.#*
+*.bak
+*.dof
+*.cfg
+*.dsm
+*.dof
+*.ddp
+*.tmp
+
+# Packages output
+__history/
+__recovery/
+__testoutput/
+
+# Delphi-specific folders
+Win32/
+Win64/
+OSX32/
+OSX64/
+iOSDevice/
+iOSSimulator/
+Android/
+Linux64/
+Debug/
+Release/
+
+# User-specific project settings
+*.tvsconfig
+*.tvsconfiglayout
+*.identcache
+*.local
+*.dproj.local
+
+# RAD Studio settings
+*.groupproj.local
+*.groupproj.tvsconfig
+*.groupproj.tvsconfiglayout
+*.project.*
+
+# IDE state files
+*.dsk
+
+# Misc
+*.log
+*.~pas
+*.~dfm
+*.~fmx
+*.~dpr
+*.~dpk
+*.~bdsproj
