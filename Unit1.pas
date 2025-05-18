@@ -26,7 +26,6 @@ type
     procedure FormResize(Sender: TObject);
     procedure AddEditListBoxItem(Sender: TObject);
     procedure CalculateAll(sender : Tobject);
-    procedure PaintLine(points : array of TPoint2d);
   private
     ChildWindow : TForm;
   public
@@ -90,6 +89,11 @@ begin
   gluOrtho2D(-50, 50, -50, 50);
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity;
+  glClearColor(1, 1, 1, 1);
+  glClear(GL_COLOR_BUFFER_BIT);
+  glColor3f(0, 0, 0);
+  DrawCoordinate;
+  SwapBuffers(wglGetCurrentDC);
 end;
 
 
@@ -99,24 +103,12 @@ begin
  EditListBox.AddEdit;
 end;
 
-procedure TForm1.PaintLine(points : array of TPoint2d);
-  var
-    point : TPoint2d;
-  begin
-      for point in points do
-      begin
-        glBegin(GL_LINES);
-
-        glEnd;
-      end;
-
-  end;
 
 
 
 procedure TForm1.CalculateAll(sender : Tobject);
   var
-    I, I2, I3, rstart, rend : Integer;
+    I, I2, I3, I4, rstart, rend : Integer;
     items : TObjectList<TEditListBoxItem>;
     variables : TObjectList<TVariablePair>;
     points : TPoints2d;
@@ -128,66 +120,90 @@ procedure TForm1.CalculateAll(sender : Tobject);
     parsed_data : TQueue<string>;
     parsed_data_copy : array of string;
     elem : string;
-    symbol, buff : string;
+    symbol, buff, buff2 : string;
+    is_x, is_y, is_z : Boolean;
     
   begin
     variables_dict := TDictionary<string, float64>.Create;
     items := EditListBox.ListBoxItems;
     for I := 0 to items.Count-1 do
     begin
-    items[i].GetVariables(variables);
-    items[i].GetMainEditData(math_expression);
-    items[i].GetRanges(ranges);
-    if Assigned(variables_dict) then variables_dict.Free;
-    variables_dict := TDictionary<string, float64>.Create;
-    buff := ranges[0].NameEdit.Text;
-    symbol := 'x';
-    if buff = 'y' 
-    then
-      symbol := 'x'
-    else if True then
+      items[i].GetVariables(variables);
+      items[i].GetMainEditData(math_expression);
+      items[i].GetRanges(ranges);
+      if Assigned(variables_dict) then variables_dict.Free;
+      variables_dict := TDictionary<string, float64>.Create;
+      variables_dict.AddOrSetValue('x', 1);
+      variables_dict.AddOrSetValue('y', 1);
+      variables_dict.AddOrSetValue('z', 1);
+      if ranges.Count > 0 then buff := ranges[0].NameEdit.Text;
       symbol := 'y';
-    
-    math_expression := SolveExpressionSymPy(math_expression, symbol);
-    if MathExpressionCalc.Parse(math_expression, parsed_data) then
+      is_x := True;
+      is_y := True;
+      is_z := True;
+
+      for range in ranges do
       begin
-      if parsed_data.Count <> 0 then
-          begin
-            SetLength(parsed_data_copy, parsed_data.Count);
-            for I3 := 0 to parsed_data.Count-1 do                                         
+        buff2 := range.NameEdit.Text;
+        if buff2 = 'x' then
+          is_x := False
+        else if buff2 = 'y' then
+          is_x := False
+        else if buff2 = 'z' then
+          is_z := False;
+      end;
+
+      if is_x and is_y and is_z then
+        raise Exception.Create('Требуется диапазон')
+      else if is_x then
+        symbol := 'x'
+      else if is_y then
+        symbol := 'y'
+      else if is_z then
+        symbol := 'z';
+
+
+      math_expression := SolveExpressionSymPy(math_expression, symbol);
+      ShowMessage(math_expression);
+      if MathExpressionCalc.Parse(math_expression, parsed_data) then
+        begin
+        if parsed_data.Count <> 0 then
             begin
-              parsed_data_copy[I] := parsed_data.Extract;
+              SetLength(parsed_data_copy, parsed_data.Count);
+              for I3 := 0 to parsed_data.Count-1 do                                         
+              begin
+                parsed_data_copy[I3] := parsed_data.Extract;
+              end;
+            end;
+          for I2 := 0 to variables.Count-1 do
+            begin
+              if TryStrToFloat(variables[I2].ValueEdit.Text, value) then
+                variables_dict.AddOrSetValue(variables[I2].NameEdit.Text, value);
+            end;
+          for range in ranges do
+            begin
+              if TryDecimalStrToInt(range.StartEdit.Text, rstart) and TryDecimalStrToInt(range.EndEdit.Text, rend) then
+              begin
+                if rstart > rend then raise Exception.Create('range must be positive');
+                for I4:=0 to Length(parsed_data_copy)-1 do
+                begin
+                  parsed_data.Enqueue(parsed_data_copy[I4]);
+                end;
+                if MathExpressionCalc.CalcPointsByRange(rstart, rend, variables_dict, symbol, range.NameEdit.Text, parsed_data, points, parsed_data_copy) then
+                  begin
+                    glClearColor(1, 1, 1, 1);
+                    glClear(GL_COLOR_BUFFER_BIT);
+                    DrawCoordinate;
+                    SetGLColor(clRed);
+                    DrawGraph(points);
+                    SwapBuffers(wglGetCurrentDC);
+                  end;
+              end
+              else
+                raise Exception.Create('range error');
             end;
           end;
-        for I2 := 0 to variables.Count-1 do
-          begin
-            if TryStrToFloat(variables[I2].ValueEdit.Text, value) then
-              variables_dict.AddOrSetValue(variables[I2].NameEdit.Text, value);
-          end;
-        for range in ranges do
-          begin
-            if TryDecimalStrToInt(range.StartEdit.Text, rstart) and TryDecimalStrToInt(range.EndEdit.Text, rend) then
-            begin
-              if rstart > rend then raise Exception.Create('range must be positive');
-              for elem in parsed_data_copy do
-              begin
-                parsed_data.Enqueue(elem);
-              end;
-              if MathExpressionCalc.CalcPointsByRange(rstart, rend, variables_dict, symbol, parsed_data, points) then
-                begin
-                  glClearColor(1, 1, 1, 1);
-                  glClear(GL_COLOR_BUFFER_BIT);
-                  DrawCoordinate;
-                  glColor3f(0, 0, 0);
-                  DrawGraph(points);
-                  SwapBuffers(wglGetCurrentDC);
-                end;
-            end
-            else
-              raise Exception.Create('range error');
-          end;
         end;
-      end;
   end;
 
 procedure CallArrange;

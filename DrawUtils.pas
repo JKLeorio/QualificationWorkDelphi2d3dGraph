@@ -2,13 +2,15 @@ unit DrawUtils;
 
 interface
 
-uses OpenGL, Parser, System.SysUtils, Vcl.Dialogs;
+uses OpenGL, Parser, System.SysUtils, Vcl.Dialogs, Vcl.Graphics, Windows;
 
 procedure DrawOs(alfa : Float32);
 
 procedure DrawGraph(points : TPoints2d);
 
 procedure DrawCoordinate;
+
+procedure SetGLColor(Color: TColor);
 
 implementation
 
@@ -46,6 +48,18 @@ procedure DrawGraph(points : TPoints2d);
     glEnd;
     
   end;
+
+procedure SetGLColor(Color: TColor);
+var
+  R, G, B: Byte;
+begin
+  Color := ColorToRGB(Color);
+  R := GetRValue(Color);
+  G := GetGValue(Color);
+  B := GetBValue(Color);
+
+  glColor3f(R / 255, G / 255, B / 255);
+end;
 
 procedure DrawCoordinate;
 begin
