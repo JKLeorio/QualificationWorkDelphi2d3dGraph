@@ -18,13 +18,13 @@ object Form1: TForm1
     Top = 0
     Width = 1149
     Height = 753
-    ActivePage = TabSheet1
+    ActivePage = TabSheet2
     TabOrder = 0
     object TabSheet1: TTabSheet
       Caption = 'TabSheet1'
       object Button2: TButton
         Left = 96
-        Top = 542
+        Top = 606
         Width = 113
         Height = 27
         Caption = #1042#1099#1095#1080#1089#1083#1080#1090#1100' '#1074#1089#1105
@@ -33,18 +33,19 @@ object Form1: TForm1
       end
       object Button3: TButton
         Left = 96
-        Top = 484
-        Width = 153
-        Height = 41
-        Caption = #1044#1086#1073#1072#1074#1080#1090#1100' '#1085#1077#1080#1079#1074#1077#1089#1090#1085#1086#1077
+        Top = 548
+        Width = 161
+        Height = 45
+        Caption = #1044#1086#1073#1072#1074#1080#1090#1100' '#1075#1088#1072#1092#1080#1082
         TabOrder = 1
-        OnClick = AddEditListBoxItem
+        OnClick = AddEditListBoxItem2d
       end
       object Panel2: TPanel
         Left = 96
         Top = 17
-        Width = 393
-        Height = 461
+        Width = 313
+        Height = 512
+        BorderStyle = bsSingle
         TabOrder = 2
       end
       object Button1: TButton
@@ -59,8 +60,8 @@ object Form1: TForm1
         Left = 516
         Top = 17
         Width = 593
-        Height = 564
-        Caption = 'Panel1'
+        Height = 576
+        BorderStyle = bsSingle
         TabOrder = 4
       end
     end
@@ -68,12 +69,38 @@ object Form1: TForm1
       Caption = 'TabSheet2'
       ImageIndex = 1
       object Panel3: TPanel
-        Left = 393
-        Top = 3
-        Width = 745
-        Height = 558
-        Caption = 'Panel3'
+        Left = 512
+        Top = 21
+        Width = 578
+        Height = 582
+        BorderStyle = bsSingle
         TabOrder = 0
+      end
+      object Button4: TButton
+        Left = 96
+        Top = 620
+        Width = 149
+        Height = 29
+        Caption = #1042#1099#1095#1080#1089#1083#1080#1090#1100' '#1074#1089#1105
+        TabOrder = 1
+      end
+      object Panel4: TPanel
+        Left = 96
+        Top = 21
+        Width = 313
+        Height = 522
+        BorderStyle = bsSingle
+        ParentBackground = False
+        TabOrder = 2
+      end
+      object Button5: TButton
+        Left = 96
+        Top = 560
+        Width = 169
+        Height = 43
+        Caption = #1044#1086#1073#1072#1074#1080#1090#1100' '#1075#1088#1072#1092#1080#1082
+        TabOrder = 3
+        OnClick = AddEditListBoxItem3d
       end
     end
   end

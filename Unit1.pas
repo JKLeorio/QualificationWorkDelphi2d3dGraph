@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, OpenGLControl, GLFSWindow, Parser,
-  Generics.Collections, StrUtils, DrawUtils, EditListBox, Vcl.ComCtrls;
+  Generics.Collections, StrUtils, DrawUtils, EditListBox, Vcl.ComCtrls, EditListBoxItem;
 
 
 
@@ -20,36 +20,57 @@ type
     Button1: TButton;
     Panel1: TPanel;
     Panel3: TPanel;
+    Panel4: TPanel;
+    Button4: TButton;
+    Button5: TButton;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure OpenGLControlPaint(Sender : TObject);
     procedure FormResize(Sender: TObject);
-    procedure AddEditListBoxItem(Sender: TObject);
+    procedure AddEditListBoxItem2d(Sender: TObject);
+    procedure AddEditListBoxItem3d(Sender: TObject);
     procedure CalculateAll(sender : Tobject);
   private
     ChildWindow : TForm;
   public
+    items_points : TDictionary<TEditlistBoxitem, TArray<TPoint>>;
+    procedure DrawGraphs2d;
 
   end;
+
 
 
 var
   Form1: TForm1;
   FOpenGLControl: TOpenGLControl;
+  FOpenGLControl3D : TOpenGLControl;
   GLSFWindow : TGLFSWindowForm;
   MathExpressionCalc : TMathExpressionCalc;
-  EditListBox : TEditListBox;
+  EditListBox2d : TEditListBox;
+  EditlistBox3d : TEditListBox;
 
-procedure CallArrange;
+procedure CallListBoxArrange2d;
+procedure CallListBoxArrange3d;
 
 implementation
 
 uses
-  OpenGL, EditListBoxItem, MathUtils;
+  OpenGL, MathUtils;
 
 {$R *.dfm}
 
+procedure TForm1.DrawGraphs2d;
+  var
+  I : Integer;
+  item : TEditListBoxItem;
+  items : TObjectList<TEditListBoxItem>;
+  begin
+    items := EditListBox2d.ListBoxItems;
+    for I := 0 to items.Count-1 do
+    begin
 
+    end;
+  end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
@@ -59,9 +80,20 @@ begin
   FOpenGLControl.Align := alClient;
   FOpenGLControl.Visible := True;
   FOpenGLControl.OnPaint := OpenGLControlPaint;
-  EditListBox := TEditListBox.Create(nil);
-  EditListBox.Parent := Panel2;
-  EditListBox.Align := alClient;
+
+//  FOpenGLControl3d := TOpenGLControl.Create(nil);
+//  FOpenGLControl3d.Parent := Panel3;
+//  FOpenGLControl3d.Align := alClient;
+//  FOpenGLControl3d.Visible := True;
+//  FOpenGLControl3d.OnPaint := OpenGLControlPaint;
+
+  EditListBox2d := TEditListBox.Create(nil);
+  EditListBox2d.Parent := Panel2;
+  EditListBox2d.Align := alClient;
+
+  EditlistBox3d := TEditListBox.Create(nil);
+  EditlistBox3d.Parent := Panel4;
+  EditlistBox3d.Align := alClient;
 end;
 
 procedure TForm1.FormDestroy(Sender: TObject);
@@ -98,20 +130,25 @@ end;
 
 
 
-procedure TForm1.AddEditListBoxItem(Sender: TObject);
+procedure TForm1.AddEditListBoxItem2d(Sender: TObject);
 begin
- EditListBox.AddEdit;
+ EditListBox2d.AddEdit;
 end;
 
-
+procedure TForm1.AddEditListBoxItem3d(Sender: TObject);
+  begin
+   EditListBox3d.AddEdit;
+  end;
 
 
 procedure TForm1.CalculateAll(sender : Tobject);
   var
-    I, I2, I3, I4, rstart, rend : Integer;
+    I, I2, I3, I4, I5 , rstart, rend : Integer;
     items : TObjectList<TEditListBoxItem>;
     variables : TObjectList<TVariablePair>;
-    points : TPoints2d;
+    points : TArray<TPoint>;
+    points_result : TArray<TPoint>;
+    pointsList : Tlist<Tpoint>;
     math_expression : string;
     variables_dict : TDictionary<string, float64>;
     value : Float64;
@@ -120,51 +157,69 @@ procedure TForm1.CalculateAll(sender : Tobject);
     parsed_data : TQueue<string>;
     parsed_data_copy : array of string;
     elem : string;
-    symbol, buff, buff2 : string;
-    is_x, is_y, is_z : Boolean;
-    
+    symbol, buff : string;
+    is_x, is_y, is_z, edited : Boolean;
+    dependentVar : string;
   begin
     variables_dict := TDictionary<string, float64>.Create;
-    items := EditListBox.ListBoxItems;
+    items := EditListBox2d.ListBoxItems;
+    pointsList := TList<TPoint>.Create;
     for I := 0 to items.Count-1 do
     begin
+
+      if Assigned(ranges) then ranges.Free;
+      if Assigned(variables) then variables.Free;
+      if Assigned(variables_dict) then variables_dict.Clear;
+
+      if not items[i].IfChangedGetMainEditData(math_expression) then
+        Continue;
+
+      pointsList.Clear;
       items[i].GetVariables(variables);
-      items[i].GetMainEditData(math_expression);
       items[i].GetRanges(ranges);
       if Assigned(variables_dict) then variables_dict.Free;
       variables_dict := TDictionary<string, float64>.Create;
-      variables_dict.AddOrSetValue('x', 1);
-      variables_dict.AddOrSetValue('y', 1);
-      variables_dict.AddOrSetValue('z', 1);
-      if ranges.Count > 0 then buff := ranges[0].NameEdit.Text;
-      symbol := 'y';
+      dependentVar := items[i].DependentVarEdit.Text;
+
       is_x := True;
       is_y := True;
       is_z := True;
 
       for range in ranges do
       begin
-        buff2 := range.NameEdit.Text;
-        if buff2 = 'x' then
+        variables_dict.AddOrSetValue('x', 1);
+        variables_dict.AddOrSetValue('y', 1);
+        variables_dict.AddOrSetValue('z', 1);
+
+        if range.NameEdit.Modified or range.StartEdit.Modified or range.EndEdit.Modified then
+          edited := True;
+
+        buff := range.NameEdit.Text;
+        if buff = 'x' then
           is_x := False
-        else if buff2 = 'y' then
+        else if buff = 'y' then
           is_x := False
-        else if buff2 = 'z' then
+        else if buff = 'z' then
           is_z := False;
       end;
 
       if is_x and is_y and is_z then
-        raise Exception.Create('Требуется диапазон')
-      else if is_x then
-        symbol := 'x'
-      else if is_y then
-        symbol := 'y'
-      else if is_z then
-        symbol := 'z';
+        raise Exception.Create('Требуется диапазон');
+
+      if not is_x and not is_y and not is_z then
+        raise Exception.Create('Зависимая переменная не может быть диапазоном');
 
 
-      math_expression := SolveExpressionSymPy(math_expression, symbol);
+        for I2 := 0 to variables.Count-1 do
+            begin
+              if variables[i2].NameEdit.Modified or variables[i].ValueEdit.Modified and TryStrToFloat(variables[I2].ValueEdit.Text, value) then
+                variables_dict.AddOrSetValue(variables[I2].NameEdit.Text, value);
+                edited := True;
+            end;
+
+      math_expression := SolveExpressionSymPy(math_expression, dependentVar);
       ShowMessage(math_expression);
+      glClearColor(1, 1, 1, 1);
       if MathExpressionCalc.Parse(math_expression, parsed_data) then
         begin
         if parsed_data.Count <> 0 then
@@ -175,11 +230,6 @@ procedure TForm1.CalculateAll(sender : Tobject);
                 parsed_data_copy[I3] := parsed_data.Extract;
               end;
             end;
-          for I2 := 0 to variables.Count-1 do
-            begin
-              if TryStrToFloat(variables[I2].ValueEdit.Text, value) then
-                variables_dict.AddOrSetValue(variables[I2].NameEdit.Text, value);
-            end;
           for range in ranges do
             begin
               if TryDecimalStrToInt(range.StartEdit.Text, rstart) and TryDecimalStrToInt(range.EndEdit.Text, rend) then
@@ -189,11 +239,15 @@ procedure TForm1.CalculateAll(sender : Tobject);
                 begin
                   parsed_data.Enqueue(parsed_data_copy[I4]);
                 end;
-                if MathExpressionCalc.CalcPointsByRange(rstart, rend, variables_dict, symbol, range.NameEdit.Text, parsed_data, points, parsed_data_copy) then
+                if MathExpressionCalc.CalcPointsByRange(rstart, rend, variables_dict, dependentVar, range.NameEdit.Text, parsed_data, points, parsed_data_copy) then
                   begin
-                    DrawCoordinate;
-                    SetGLColor(clRed);
-                    DrawGraph(points);
+                  for I5 := 0 to High(points) do
+                    pointsList.Add(points[I5]);
+                  Self.items_points.AddOrSetValue(items[i], pointsList.ToArray);
+                  pointsList.Clear;
+//                    DrawCoordinate;
+//                    SetGLColor(clRed);
+//                    DrawGraph(points);
                   end;
               end
               else
@@ -201,12 +255,21 @@ procedure TForm1.CalculateAll(sender : Tobject);
             end;
         end;
     end;
-    SwapBuffers(wglGetCurrentDC);
+//    SwapBuffers(wglGetCurrentDC);
   end;
 
-procedure CallArrange;
+procedure CallListBoxArrange2d;
   begin
-    EditListBox.ArrangeEdits;
+    EditListBox2d.ArrangeEdits;
   end;
+
+
+procedure CallListBoxArrange3d;
+  begin
+    EditListBox3d.ArrangeEdits;
+  end;
+
+
 end.
+
 

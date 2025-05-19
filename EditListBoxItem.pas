@@ -29,6 +29,7 @@ type
     FSelectedColor: TColor;
     FColorDisplay: TPanel;
     FColorDialog: TColorDialog;
+    FDependentVarEdit: TEdit;
     FMainEdit: TEdit;
     FDeleteButton: TButton;
     FAddVarButton: TButton;
@@ -42,6 +43,7 @@ type
     procedure OnDeleteVariableClick(Sender : TObject);
     procedure OnDeleteRangeClick(Sender: TObject);
     procedure OnAddRangeClick(Sender: TObject);
+    procedure OnDependedVarEdit(Sender : TObject);
 
     procedure SetSelectedColor(const Value: TColor);
 
@@ -53,11 +55,13 @@ type
 
     property SelectedColor: TColor read FSelectedColor write SetSelectedColor;
 
+    property DependentVarEdit : TEdit read FDependentVarEdit write FDependentVarEdit;
+
     property MaxRanges : Integer read FMaxRanges write FMaxRanges;
 
     procedure GetRanges(out result : TList<TRangePair>);
 
-    procedure GetMainEditData(out result : string);
+    function IfChangedGetMainEditData(out resultStr : string) : Boolean;
 
     procedure GetVariables(out result : TObjectList<TVariablePair>);
 
@@ -67,7 +71,7 @@ procedure SetDeleteButtonFunction(EditListBoxItem : TEditListBoxItem; func : TNo
 
 implementation
 
-uses Unit1;
+uses Unit1, System.SysUtils;
 
 procedure TEditListBoxItem.GetRanges(out result : TList<TRangePair>);
   begin
@@ -84,9 +88,13 @@ begin
   result := FVariables;
 end;
 
-procedure TEditListBoxItem.GetMainEditData(out result : string);
+function TEditListBoxItem.IfChangedGetMainEditData(out resultStr : string) : Boolean;
 begin
-  result := FMainEdit.Text;
+  if FMainEdit.Modified then
+  begin
+    resultStr := FMainEdit.Text;
+    Result := True
+  end;
 end;
 
 
@@ -122,6 +130,12 @@ begin
   FMainEdit := TEdit.Create(Self);
   FMainEdit.Parent := Self;
 
+  FDependentVarEdit := TEdit.Create(self);
+  FDependentVarEdit.Parent := Self;
+  FDependentVarEdit.Text := 'Y';
+  FDependentVarEdit.OnChange := OnDependedVarEdit;
+
+
   FDeleteButton := TButton.Create(Self);
   FDeleteButton.Parent := Self;
   FDeleteButton.Caption := '✖';
@@ -146,6 +160,15 @@ begin
   FHideButton.Caption := 'Скрыть';
   Arrange;
 end;
+
+procedure TEditListBoxItem.OnDependedVarEdit(Sender: TObject);
+  begin
+    if (Length(Self.DependentVarEdit.Text) >= 1) and not (self.DependentVarEdit.Text[1] in ['y','Y','x','X', 'z', 'Z']) then
+    begin
+      Self.DependentVarEdit.Text := 'Y';
+      raise Exception.Create('Зависимая переменная должна принадлежать оси');
+    end;
+  end;
 
 destructor TEditListBoxItem.Destroy;
 begin
@@ -178,7 +201,8 @@ var
 begin
   FColorButton.SetBounds(10, 10, 30, 23);
   FColorDisplay.SetBounds(45, 10, 24, 24);
-  FMainEdit.SetBounds(75, 10, 200, 23);
+  FDependentVarEdit.SetBounds(75, 10, 25,24);
+  FMainEdit.SetBounds(105, 10, 200, 23);
   FDeleteButton.SetBounds(280, 10, 30, 23);
 
   FAddVarButton.SetBounds(10, 40, 120, 23);
@@ -228,7 +252,7 @@ begin
   self.Height := Self.Height + VarPair.NameEdit.Height;
   FVariables.Add(VarPair);
   Arrange;
-  CallArrange;
+  CallListBoxArrange2d;
 end;
 
 
@@ -269,7 +293,7 @@ begin
   FRanges.Add(RangePair);
   self.Height := Self.Height + RangePair.NameEdit.Height;
   Arrange;
-  CallArrange;
+  CallListBoxArrange2d;
 end;
 
 procedure TEditListBoxItem.OnDeleteRangeClick(Sender: TObject);
@@ -293,7 +317,7 @@ begin
       Pair.Free;
       Break;
       Arrange;
-      CallArrange;
+      CallListBoxArrange2d;
     end;
   end;
 
@@ -319,7 +343,7 @@ begin
       FVariables.Delete(i);
 
       Arrange;
-      CallArrange;
+      CallListBoxArrange2d;
       Break;
     end;
   end;

@@ -6,19 +6,13 @@ uses
   Generics.Collections, MathUtils;
 
 type
-  TPoint2d = record
+  TPoint = record
     x : Float64;
     y : Float64;
-  end;
-
-  TPoint3d = record
-    x : Float64;
-    y : Float64;
-    z : Float64;
+    z : Float64
   end;
 
 
-  TPoints2d = array of TPoint2d;
 
   TFunction = reference to function(a, b : Float64) : Float64;
 
@@ -28,6 +22,8 @@ type
   end;
 
   TUnaryFunc = reference to function(x: Float64): Float64;
+
+
 
   TMathExpressionCalc = class
     OPERATORS : TDictionary<string, TOperator>;
@@ -40,12 +36,12 @@ type
       function Parse(math_expression : string; out resultData : TQueue<string>) : Boolean;
       
       function CalculationBySymbol2D(translated_expression : TQueue<string>;
-       variables : TDictionary<string, float64>; res_variable : string;
-       range_variable:string; out resultPoint : TPoint2d) : Boolean;
+       variables : TDictionary<string, float64>; dependentVar : string;
+       range_variable:string; out resultPoint : TPoint) : Boolean;
        
       function CalcPointsByRange(rstart : integer; rend : integer; variables : TDictionary<string,
-       float64>; res_variable : string; range_variable : string;
-        parsed_expression_data : TQueue<string>; out points : TPoints2d; math_expression_copy : array of string) : Boolean;
+       float64>; dependentVar : string; range_variable : string;
+        parsed_expression_data : TQueue<string>; out points : TArray<TPoint>; math_expression_copy : array of string) : Boolean;
         
       procedure SetVariables(variables : TDictionary<string, float64>);
   end;
@@ -63,6 +59,8 @@ implementation
     Vcl.Forms,
     Vcl.Dialogs,
     Vcl.StdCtrls;
+
+
 
 function GetRightSideOfAssignment(expr: string): string;
   var
@@ -636,9 +634,9 @@ function OccurrencesOfChar(const S: string; const C: char): integer;
 function TMathExpressionCalc.CalculationBySymbol2D(
   translated_expression: TQueue<string>;
   variables: TDictionary<string, float64>;
-  res_variable: string;
+  dependentVar: string;
   range_variable: string;
-  out resultPoint: TPoint2d
+  out resultPoint: TPoint
 ): Boolean;
   var
     stack: TStack<Float64>;
@@ -694,20 +692,28 @@ function TMathExpressionCalc.CalculationBySymbol2D(
 
       if stack.Count = 1 then
         begin
-        if res_variable = 'x' then
+        if dependentVar = 'x' then
           begin
-            resultPoint.y := stack.Extract;
-            resultPoint.x :=  variables.Items[range_variable];
+            resultPoint.x := stack.Extract;
+            resultPoint.y := variables.Items['y'];
+            resultPoint.z := variables.Items['z'];
             Result := True;
           end
-        else if res_variable = 'y' then
+        else if dependentVar = 'y' then
           begin
             resultPoint.y := stack.Extract;
-            resultPoint.x := variables.Items[range_variable];
+            resultPoint.x := variables.Items['x'];
+            resultPoint.z := variables.Items['z'];
             Result := True;
           end
+        else if dependentVar = 'z' then
+           begin
+            resultPoint.y := variables.Items['y'];
+            resultPoint.x := variables.Items['x'];
+            resultPoint.z := stack.Extract;
+           end
         else
-          raise Exception.Create('Unknown res_variable: "' + res_variable + '"');
+          raise Exception.Create('Unknown res_variable: "' + dependentVar + '"');
     end;
     stack.Free;
   end;
@@ -716,11 +722,11 @@ function TMathExpressionCalc.CalculationBySymbol2D(
 
   function TMathExpressionCalc.CalcPointsByRange(rstart : integer; rend : integer;
    variables : TDictionary<string, float64>;
-   res_variable : string; range_variable : string; parsed_expression_data : TQueue<string>;
-    out points : TPoints2d; math_expression_copy : array of string) : Boolean;
+   dependentVar : string; range_variable : string; parsed_expression_data : TQueue<string>;
+    out points : TArray<TPoint>; math_expression_copy : array of string) : Boolean;
   var
     I, I2 : Integer;
-    point : TPoint2d;
+    point : TPoint;
     Y : Float64;
     parsed_expression : TQueue<string>;
     elem : string;
@@ -738,7 +744,7 @@ function TMathExpressionCalc.CalculationBySymbol2D(
               parsed_expression.Enqueue(math_expression_copy[I2]);
             end;
             variables.AddOrSetValue(range_variable, I+rstart);
-            if CalculationBySymbol2D(parsed_expression, variables, res_variable, range_variable, point) then
+            if CalculationBySymbol2D(parsed_expression, variables, dependentVar, range_variable, point) then
             begin
               points[I] := point;
             end;
