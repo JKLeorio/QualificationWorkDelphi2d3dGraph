@@ -6,7 +6,7 @@ uses
   Generics.Collections, MathUtils;
 
 type
-  TPoint = record
+  TGraphPoint = record
     x : Float64;
     y : Float64;
     z : Float64
@@ -37,11 +37,11 @@ type
       
       function CalculationBySymbol2D(translated_expression : TQueue<string>;
        variables : TDictionary<string, float64>; dependentVar : string;
-       range_variable:string; out resultPoint : TPoint) : Boolean;
+       range_variable:string; out resultPoint : TGraphPoint) : Boolean;
        
       function CalcPointsByRange(rstart : integer; rend : integer; variables : TDictionary<string,
        float64>; dependentVar : string; range_variable : string;
-        parsed_expression_data : TQueue<string>; out points : TArray<TPoint>; math_expression_copy : array of string) : Boolean;
+        parsed_expression_data : TQueue<string>; out points : TArray<TGraphPoint>; math_expression_copy : array of string) : Boolean;
         
       procedure SetVariables(variables : TDictionary<string, float64>);
   end;
@@ -636,7 +636,7 @@ function TMathExpressionCalc.CalculationBySymbol2D(
   variables: TDictionary<string, float64>;
   dependentVar: string;
   range_variable: string;
-  out resultPoint: TPoint
+  out resultPoint: TGraphPoint
 ): Boolean;
   var
     stack: TStack<Float64>;
@@ -723,10 +723,10 @@ function TMathExpressionCalc.CalculationBySymbol2D(
   function TMathExpressionCalc.CalcPointsByRange(rstart : integer; rend : integer;
    variables : TDictionary<string, float64>;
    dependentVar : string; range_variable : string; parsed_expression_data : TQueue<string>;
-    out points : TArray<TPoint>; math_expression_copy : array of string) : Boolean;
+    out points : TArray<TGraphPoint>; math_expression_copy : array of string) : Boolean;
   var
     I, I2 : Integer;
-    point : TPoint;
+    point : TGraphPoint;
     Y : Float64;
     parsed_expression : TQueue<string>;
     elem : string;

@@ -31,6 +31,7 @@ type
     FColorDialog: TColorDialog;
     FDependentVarEdit: TEdit;
     FMainEdit: TEdit;
+    FDependentLabel : TLabel;
     FDeleteButton: TButton;
     FAddVarButton: TButton;
     FAddRangeButton : TButton;
@@ -44,13 +45,20 @@ type
     procedure OnDeleteRangeClick(Sender: TObject);
     procedure OnAddRangeClick(Sender: TObject);
     procedure OnDependedVarEdit(Sender : TObject);
+    procedure OnVariableNameEdit(Sender : TObject);
+    procedure OnHideClick(Sender : TObject);
 
     procedure SetSelectedColor(const Value: TColor);
+
 
     procedure Arrange;
   public
 
+    IsGraphHidden : Boolean;
+    onHideMethod : TNotifyEvent;
+
     constructor Create(AOwner: TComponent); override;
+
     destructor Destroy; override;
 
     property SelectedColor: TColor read FSelectedColor write SetSelectedColor;
@@ -59,11 +67,13 @@ type
 
     property MaxRanges : Integer read FMaxRanges write FMaxRanges;
 
+
     procedure GetRanges(out result : TList<TRangePair>);
 
     function IfChangedGetMainEditData(out resultStr : string) : Boolean;
 
     procedure GetVariables(out result : TObjectList<TVariablePair>);
+
 
   end;
 
@@ -71,7 +81,12 @@ procedure SetDeleteButtonFunction(EditListBoxItem : TEditListBoxItem; func : TNo
 
 implementation
 
-uses Unit1, System.SysUtils;
+uses Unit1, System.SysUtils, MathUtils;
+
+
+procedure TEditListBoxItem.OnHideClick(Sender : TObject);
+  begin
+  end;
 
 procedure TEditListBoxItem.GetRanges(out result : TList<TRangePair>);
   begin
@@ -96,6 +111,19 @@ begin
     Result := True
   end;
 end;
+
+procedure TEditListBoxItem.OnVariableNameEdit(Sender: TObject);
+  var
+  edit : TVariablePair;
+  buff : Integer;
+  begin
+    for edit in self.FVariables do
+    if edit = Sender then
+      if edit.NameEdit.Text = Self.DependentVarEdit.Text then
+        raise Exception.Create('Переменная не может быть зависимой переменной')
+      else if TryDecimalStrToInt(edit.NameEdit.Text, buff) then
+        raise Exception.Create('Переменная должна быть буквенным');
+  end;
 
 
 constructor TEditListBoxItem.Create(AOwner: TComponent);
@@ -132,9 +160,12 @@ begin
 
   FDependentVarEdit := TEdit.Create(self);
   FDependentVarEdit.Parent := Self;
-  FDependentVarEdit.Text := 'Y';
+  FDependentVarEdit.Text := 'y';
   FDependentVarEdit.OnChange := OnDependedVarEdit;
 
+  FDependentLabel := TLabel.Create(self);
+  FDependentLabel.Parent := self;
+  FDependentLabel.Caption := 'З';
 
   FDeleteButton := TButton.Create(Self);
   FDeleteButton.Parent := Self;
@@ -158,6 +189,7 @@ begin
   FHideButton := TButton.Create(Self);
   FHideButton.Parent := Self;
   FHideButton.Caption := 'Скрыть';
+  FHideButton.OnClick := onHideMethod;
   Arrange;
 end;
 
@@ -165,7 +197,7 @@ procedure TEditListBoxItem.OnDependedVarEdit(Sender: TObject);
   begin
     if (Length(Self.DependentVarEdit.Text) >= 1) and not (self.DependentVarEdit.Text[1] in ['y','Y','x','X', 'z', 'Z']) then
     begin
-      Self.DependentVarEdit.Text := 'Y';
+      Self.DependentVarEdit.Text := 'y';
       raise Exception.Create('Зависимая переменная должна принадлежать оси');
     end;
   end;
@@ -201,8 +233,9 @@ var
 begin
   FColorButton.SetBounds(10, 10, 30, 23);
   FColorDisplay.SetBounds(45, 10, 24, 24);
-  FDependentVarEdit.SetBounds(75, 10, 25,24);
-  FMainEdit.SetBounds(105, 10, 200, 23);
+  FDependentLabel.SetBounds(72, 11, 25, 23);
+  FDependentVarEdit.SetBounds(80, 10, 25,24);
+  FMainEdit.SetBounds(115, 10, 200, 23);
   FDeleteButton.SetBounds(280, 10, 30, 23);
 
   FAddVarButton.SetBounds(10, 40, 120, 23);
@@ -239,9 +272,11 @@ begin
   VarPair := TVariablePair.Create;
   VarPair.NameEdit := TEdit.Create(Self);
   VarPair.NameEdit.Parent := Self;
+  VarPair.NameEdit.OnChange := OnVariableNameEdit;
 
   VarPair.ValueEdit := TEdit.Create(Self);
   VarPair.ValueEdit.Parent := Self;
+  VarPair.ValueEdit.NumbersOnly := True;
 
   VarPair.DeleteButton := TButton.Create(Self);
   VarPair.DeleteButton.Parent := Self;
@@ -277,11 +312,13 @@ begin
   RangePair.StartEdit := TEdit.Create(Self);
   RangePair.StartEdit.Parent := Self;
   RangePair.StartEdit.Text := '0';
+  RangePair.StartEdit.NumbersOnly := True;
 
 
   RangePair.EndEdit := TEdit.Create(Self);
   RangePair.EndEdit.Parent := Self;
   RangePair.EndEdit.Text := '10';
+  RangePair.EndEdit.NumbersOnly := True;
 
 
   RangePair.DeleteButton := TButton.Create(Self);

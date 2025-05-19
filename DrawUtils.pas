@@ -6,7 +6,7 @@ uses OpenGL, Parser, System.SysUtils, Vcl.Dialogs, Vcl.Graphics, Windows;
 
 procedure DrawOs(alfa : Float32);
 
-procedure DrawGraph(points : TArray<TPoint>);
+procedure DrawGraph(points : TArray<TGraphPoint>);
 
 procedure DrawCoordinate;
 
@@ -34,7 +34,7 @@ procedure DrawOs(alfa : Float32);
     glPopMatrix;
   end;
 
-procedure DrawGraph(points : TArray<TPoint>);
+procedure DrawGraph(points : TArray<TGraphPoint>);
   var
     I : Integer;
   begin

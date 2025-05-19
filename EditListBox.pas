@@ -12,6 +12,7 @@ type
     FEditListBoxItems: TObjectList<TEditListBoxItem>;
     FSpacing: Integer;
   public
+    onBoxItemHideMethod : TNotifyEvent;
     procedure ArrangeEdits;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -55,6 +56,7 @@ begin
   Item := TEditListBoxItem.Create(Self);
   Item.Parent := Self;
   Item.Visible := True;
+  Item.onHideMethod := onBoxItemHideMethod;
   FEditListBoxItems.Add(Item);
   SetDeleteButtonFunction(item, OnDeleteClick);
   ArrangeEdits;

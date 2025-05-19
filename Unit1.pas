@@ -30,11 +30,13 @@ type
     procedure AddEditListBoxItem2d(Sender: TObject);
     procedure AddEditListBoxItem3d(Sender: TObject);
     procedure CalculateAll(sender : Tobject);
+    procedure OnClickBoxItemHide(sender : TObject);
   private
     ChildWindow : TForm;
   public
-    items_points : TDictionary<TEditlistBoxitem, TArray<TPoint>>;
+    items_points : TDictionary<TEditlistBoxitem, TArray<TGraphPoint>>;
     procedure DrawGraphs2d;
+    procedure OnClickBoxItemCalc(sender : TObject);
 
   end;
 
@@ -59,33 +61,76 @@ uses
 
 {$R *.dfm}
 
+
+procedure TForm1.OnClickBoxItemCalc(sender : TObject);
+  var
+    item : TEditListBoxItem;
+    btn : TButton;
+  begin
+    if sender is TButton then
+    begin
+      btn := TButton(sender);
+      if btn.parent is TEditListBoxItem then
+      begin
+        item := TEditListBoxItem(btn.Parent);
+
+      end;
+    end;
+  end;
+
+procedure TForm1.OnClickBoxItemHide(sender : TObject);
+  var
+    item : TEditListBoxItem;
+    btn : TButton;
+  begin
+    if sender is TButton then
+    begin
+      btn := TButton(sender);
+      if btn.parent is TEditListBoxItem then
+      begin
+        item := TEditListBoxItem(btn.Parent);
+        item.IsGraphHidden := not item.IsGraphHidden;
+      end;
+    end;
+  end;
+
 procedure TForm1.DrawGraphs2d;
   var
   I : Integer;
   item : TEditListBoxItem;
   items : TObjectList<TEditListBoxItem>;
+  points : TArray<TGraphPoint>;
   begin
     items := EditListBox2d.ListBoxItems;
     for I := 0 to items.Count-1 do
     begin
-
+      item := items[i];
+      if not item.IsGraphHidden then
+        if items_points.ContainsKey(item) then
+        begin
+          points := items_points.Items[item];
+          DrawGraph(points);
+        end;
     end;
   end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
   MathExpressionCalc := TMathExpressionCalc.Create();
+
+  items_points := TDictionary<TEditlistBoxitem, TArray<TGraphPoint>>.Create;
+
   FOpenGLControl := TOpenGLControl.Create(nil);
   FOpenGLControl.Parent := Panel1;
   FOpenGLControl.Align := alClient;
   FOpenGLControl.Visible := True;
   FOpenGLControl.OnPaint := OpenGLControlPaint;
 
-//  FOpenGLControl3d := TOpenGLControl.Create(nil);
-//  FOpenGLControl3d.Parent := Panel3;
-//  FOpenGLControl3d.Align := alClient;
-//  FOpenGLControl3d.Visible := True;
-//  FOpenGLControl3d.OnPaint := OpenGLControlPaint;
+  FOpenGLControl3d := TOpenGLControl.Create(nil);
+  FOpenGLControl3d.Parent := Panel3;
+  FOpenGLControl3d.Align := alClient;
+  FOpenGLControl3d.Visible := True;
+  FOpenGLControl3d.OnPaint := OpenGLControlPaint;
 
   EditListBox2d := TEditListBox.Create(nil);
   EditListBox2d.Parent := Panel2;
@@ -99,6 +144,7 @@ end;
 procedure TForm1.FormDestroy(Sender: TObject);
 begin
   FOpenGLControl.Free;
+  FOpenGLControl3D.Free;
 end;
 
 procedure TForm1.FormResize(Sender: TObject);
@@ -146,9 +192,9 @@ procedure TForm1.CalculateAll(sender : Tobject);
     I, I2, I3, I4, I5 , rstart, rend : Integer;
     items : TObjectList<TEditListBoxItem>;
     variables : TObjectList<TVariablePair>;
-    points : TArray<TPoint>;
-    points_result : TArray<TPoint>;
-    pointsList : Tlist<Tpoint>;
+    points : TArray<TGraphPoint>;
+    points_result : TArray<TGraphPoint>;
+    pointsList : Tlist<TGraphPoint>;
     math_expression : string;
     variables_dict : TDictionary<string, float64>;
     value : Float64;
@@ -163,13 +209,9 @@ procedure TForm1.CalculateAll(sender : Tobject);
   begin
     variables_dict := TDictionary<string, float64>.Create;
     items := EditListBox2d.ListBoxItems;
-    pointsList := TList<TPoint>.Create;
+    pointsList := TList<TGraphPoint>.Create;
     for I := 0 to items.Count-1 do
     begin
-
-      if Assigned(ranges) then ranges.Free;
-      if Assigned(variables) then variables.Free;
-      if Assigned(variables_dict) then variables_dict.Clear;
 
       if not items[i].IfChangedGetMainEditData(math_expression) then
         Continue;
@@ -185,6 +227,8 @@ procedure TForm1.CalculateAll(sender : Tobject);
       is_y := True;
       is_z := True;
 
+
+
       for range in ranges do
       begin
         variables_dict.AddOrSetValue('x', 1);
@@ -195,7 +239,9 @@ procedure TForm1.CalculateAll(sender : Tobject);
           edited := True;
 
         buff := range.NameEdit.Text;
-        if buff = 'x' then
+        if dependentVar = buff then
+          raise Exception.Create('«ависима€ переменна€ не может быть диапазоном')
+        else if buff = 'x' then
           is_x := False
         else if buff = 'y' then
           is_x := False
@@ -241,7 +287,7 @@ procedure TForm1.CalculateAll(sender : Tobject);
                 end;
                 if MathExpressionCalc.CalcPointsByRange(rstart, rend, variables_dict, dependentVar, range.NameEdit.Text, parsed_data, points, parsed_data_copy) then
                   begin
-                  for I5 := 0 to High(points) do
+                  for I5 := 0 to High(points)-1 do
                     pointsList.Add(points[I5]);
                   Self.items_points.AddOrSetValue(items[i], pointsList.ToArray);
                   pointsList.Clear;
