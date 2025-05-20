@@ -57,7 +57,6 @@ begin
   R := GetRValue(Color);
   G := GetGValue(Color);
   B := GetBValue(Color);
-
   glColor3f(R / 255, G / 255, B / 255);
 end;
 

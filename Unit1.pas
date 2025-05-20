@@ -66,16 +66,118 @@ procedure TForm1.OnClickBoxItemCalc(sender : TObject);
   var
     item : TEditListBoxItem;
     btn : TButton;
+    I, I2, I3, I4, I5 , rstart, rend : Integer;
+    variables : TObjectList<TVariablePair>;
+    points : TArray<TGraphPoint>;
+    points_result : TArray<TGraphPoint>;
+    pointsList : Tlist<TGraphPoint>;
+    math_expression : string;
+    variables_dict : TDictionary<string, float64>;
+    value : Float64;
+    ranges : Tlist<TRangePair>;
+    range : TRangePair;
+    parsed_data : TQueue<string>;
+    parsed_data_copy : array of string;
+    elem : string;
+    symbol, buff : string;
+    is_x, is_y, is_z, edited : Boolean;
+    dependentVar : string;
   begin
     if sender is TButton then
     begin
       btn := TButton(sender);
       if btn.parent is TEditListBoxItem then
       begin
+        pointsList := TList<TGraphPoint>.Create;
         item := TEditListBoxItem(btn.Parent);
+        if not item.IfChangedGetMainEditData(math_expression) then
+          Exit;
+        item.GetVariables(variables);
+        item.GetRanges(ranges);
+        variables_dict := TDictionary<string, float64>.Create;
+        dependentVar := item.DependentVarEdit.Text;
 
+        is_x := True;
+        is_y := True;
+        is_z := True;
+
+
+
+        for range in ranges do
+        begin
+          variables_dict.AddOrSetValue('x', 1);
+          variables_dict.AddOrSetValue('y', 1);
+          variables_dict.AddOrSetValue('z', 1);
+
+          if range.NameEdit.Modified or range.StartEdit.Modified or range.EndEdit.Modified then
+            edited := True;
+
+          buff := range.NameEdit.Text;
+          if dependentVar = buff then
+            raise Exception.Create('«ависима€ переменна€ не может быть диапазоном')
+          else if buff = 'x' then
+            is_x := False
+          else if buff = 'y' then
+            is_x := False
+          else if buff = 'z' then
+            is_z := False;
+        end;
+
+        if is_x and is_y and is_z then
+          raise Exception.Create('“ребуетс€ диапазон');
+
+        if not is_x and not is_y and not is_z then
+          raise Exception.Create('«ависима€ переменна€ не может быть диапазоном');
+
+
+          for I2 := 0 to variables.Count-1 do
+              begin
+                if (variables[i2].NameEdit.Modified or variables[i].ValueEdit.Modified) and TryStrToFloat(variables[I2].ValueEdit.Text, value) then
+                begin
+                  variables_dict.AddOrSetValue(variables[I2].NameEdit.Text, value);
+                  edited := True;
+                end;
+              end;
+
+        if not edited then Exit;
+
+        math_expression := SolveExpressionSymPy(math_expression, dependentVar);
+        ShowMessage(math_expression);
+
+        if MathExpressionCalc.Parse(math_expression, parsed_data, variables_dict) then
+        begin
+        if parsed_data.Count <> 0 then
+            begin
+              SetLength(parsed_data_copy, parsed_data.Count);
+              for I3 := 0 to parsed_data.Count-1 do
+              begin
+                parsed_data_copy[I3] := parsed_data.Extract;
+              end;
+            end;
+          for range in ranges do
+            begin
+              if TryDecimalStrToInt(range.StartEdit.Text, rstart) and TryDecimalStrToInt(range.EndEdit.Text, rend) then
+              begin
+                if rstart > rend then raise Exception.Create('range must be positive');
+                for I4:=0 to Length(parsed_data_copy)-1 do
+                begin
+                  parsed_data.Enqueue(parsed_data_copy[I4]);
+                end;
+                if MathExpressionCalc.CalcPointsByRange(rstart, rend, variables_dict, dependentVar, range.NameEdit.Text, points, parsed_data_copy) then
+                  begin
+                  for I5 := 0 to High(points)-1 do
+                    pointsList.Add(points[I5]);
+                  Self.items_points.AddOrSetValue(item, pointsList.ToArray);
+                  pointsList.Clear;
+                  end;
+              end
+              else
+                raise Exception.Create('range error');
+            end;
+        end;
+        FOpenGLControl.Repaint;
+        end;
       end;
-    end;
   end;
 
 procedure TForm1.OnClickBoxItemHide(sender : TObject);
@@ -90,6 +192,7 @@ procedure TForm1.OnClickBoxItemHide(sender : TObject);
       begin
         item := TEditListBoxItem(btn.Parent);
         item.IsGraphHidden := not item.IsGraphHidden;
+        FOpenGLControl.Repaint;
       end;
     end;
   end;
@@ -109,6 +212,7 @@ procedure TForm1.DrawGraphs2d;
         if items_points.ContainsKey(item) then
         begin
           points := items_points.Items[item];
+          SetGLColor(item.SelectedColor);
           DrawGraph(points);
         end;
     end;
@@ -135,10 +239,15 @@ begin
   EditListBox2d := TEditListBox.Create(nil);
   EditListBox2d.Parent := Panel2;
   EditListBox2d.Align := alClient;
+  EditListBox2d.onBoxItemCalcMethod := OnClickBoxItemCalc;
+  EditlistBox2d.onBoxItemHideMethod := OnClickBoxItemHide;
 
   EditlistBox3d := TEditListBox.Create(nil);
   EditlistBox3d.Parent := Panel4;
   EditlistBox3d.Align := alClient;
+
+  glClearColor(1, 1, 1, 1);
+
 end;
 
 procedure TForm1.FormDestroy(Sender: TObject);
@@ -167,10 +276,10 @@ begin
   gluOrtho2D(-50, 50, -50, 50);
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity;
-  glClearColor(1, 1, 1, 1);
   glClear(GL_COLOR_BUFFER_BIT);
   glColor3f(0, 0, 0);
   DrawCoordinate;
+  DrawGraphs2d;
   SwapBuffers(wglGetCurrentDC);
 end;
 
@@ -259,19 +368,22 @@ procedure TForm1.CalculateAll(sender : Tobject);
         for I2 := 0 to variables.Count-1 do
             begin
               if variables[i2].NameEdit.Modified or variables[i].ValueEdit.Modified and TryStrToFloat(variables[I2].ValueEdit.Text, value) then
+              begin
                 variables_dict.AddOrSetValue(variables[I2].NameEdit.Text, value);
                 edited := True;
+              end;
             end;
+
+      if not edited then Continue;
 
       math_expression := SolveExpressionSymPy(math_expression, dependentVar);
       ShowMessage(math_expression);
-      glClearColor(1, 1, 1, 1);
-      if MathExpressionCalc.Parse(math_expression, parsed_data) then
+      if MathExpressionCalc.Parse(math_expression, parsed_data, variables_dict) then
         begin
         if parsed_data.Count <> 0 then
             begin
               SetLength(parsed_data_copy, parsed_data.Count);
-              for I3 := 0 to parsed_data.Count-1 do                                         
+              for I3 := 0 to parsed_data.Count-1 do
               begin
                 parsed_data_copy[I3] := parsed_data.Extract;
               end;
@@ -285,23 +397,20 @@ procedure TForm1.CalculateAll(sender : Tobject);
                 begin
                   parsed_data.Enqueue(parsed_data_copy[I4]);
                 end;
-                if MathExpressionCalc.CalcPointsByRange(rstart, rend, variables_dict, dependentVar, range.NameEdit.Text, parsed_data, points, parsed_data_copy) then
+                if MathExpressionCalc.CalcPointsByRange(rstart, rend, variables_dict, dependentVar, range.NameEdit.Text, points, parsed_data_copy) then
                   begin
                   for I5 := 0 to High(points)-1 do
                     pointsList.Add(points[I5]);
                   Self.items_points.AddOrSetValue(items[i], pointsList.ToArray);
                   pointsList.Clear;
-//                    DrawCoordinate;
-//                    SetGLColor(clRed);
-//                    DrawGraph(points);
                   end;
               end
               else
                 raise Exception.Create('range error');
             end;
         end;
+        FOpenGLControl.Repaint;
     end;
-//    SwapBuffers(wglGetCurrentDC);
   end;
 
 procedure CallListBoxArrange2d;

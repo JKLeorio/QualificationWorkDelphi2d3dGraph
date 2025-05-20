@@ -13,6 +13,7 @@ type
     FSpacing: Integer;
   public
     onBoxItemHideMethod : TNotifyEvent;
+    onBoxItemCalcMethod : TNotifyEvent;
     procedure ArrangeEdits;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -56,7 +57,7 @@ begin
   Item := TEditListBoxItem.Create(Self);
   Item.Parent := Self;
   Item.Visible := True;
-  Item.onHideMethod := onBoxItemHideMethod;
+  Item.setMethods(onBoxItemHideMethod, onBoxItemCalcMethod);
   FEditListBoxItems.Add(Item);
   SetDeleteButtonFunction(item, OnDeleteClick);
   ArrangeEdits;
@@ -109,7 +110,7 @@ begin
   for i := 0 to FEditListBoxItems.Count - 1 do
   begin
     Item := FEditListBoxItems[i];
-    Item.SetBounds(0, TopPos, ClientWidth, Item.Height);
+    Item.SetBounds(0, TopPos, ClientWidth+50, Item.Height);
     TopPos := TopPos + Item.Height;
   end;
 end;

@@ -4,7 +4,7 @@ interface
 
 uses
   System.Classes,System.StrUtils, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls,
-   Vcl.Forms, Vcl.Dialogs, Vcl.Graphics,  System.Generics.Collections;
+   Vcl.Forms, Vcl.Dialogs, Vcl.Graphics,  System.Generics.Collections, Vcl.WinXPickers;
 
 type
   TVariablePair = class
@@ -16,7 +16,7 @@ type
   public
     NameEdit: TEdit;
     StartEdit: TEdit;
-    EndEdit: TEdit;
+    EndEdit: Tedit;
     DeleteButton: TButton;
   end;
 
@@ -46,7 +46,8 @@ type
     procedure OnAddRangeClick(Sender: TObject);
     procedure OnDependedVarEdit(Sender : TObject);
     procedure OnVariableNameEdit(Sender : TObject);
-    procedure OnHideClick(Sender : TObject);
+    procedure EditKeyPress(Sender: TObject; var Key: Char);
+
 
     procedure SetSelectedColor(const Value: TColor);
 
@@ -55,7 +56,8 @@ type
   public
 
     IsGraphHidden : Boolean;
-    onHideMethod : TNotifyEvent;
+
+    procedure setMethods(onhidemethod : TNotifyEvent; oncalcmethod : TNotifyEvent);
 
     constructor Create(AOwner: TComponent); override;
 
@@ -84,9 +86,21 @@ implementation
 uses Unit1, System.SysUtils, MathUtils;
 
 
-procedure TEditListBoxItem.OnHideClick(Sender : TObject);
+procedure TEditListBoxItem.EditKeyPress(Sender: TObject; var Key: Char);
+begin
+  if not (Key in ['0'..'9', '-', #8]) then
+    Key := #0;
+
+  if (Key = '-') and ((TEdit(Sender).SelStart <> 0) or (Pos('-', TEdit(Sender).Text) > 0)) then
+    Key := #0;
+end;
+
+procedure TEditListBoxItem.setMethods(onhidemethod : TNotifyEvent; oncalcmethod : TNotifyEvent);
   begin
+    FHideButton.OnClick := onhidemethod;
+    FEvaluateButton.OnClick := oncalcmethod;
   end;
+
 
 procedure TEditListBoxItem.GetRanges(out result : TList<TRangePair>);
   begin
@@ -189,7 +203,6 @@ begin
   FHideButton := TButton.Create(Self);
   FHideButton.Parent := Self;
   FHideButton.Caption := 'Скрыть';
-  FHideButton.OnClick := onHideMethod;
   Arrange;
 end;
 
@@ -276,7 +289,7 @@ begin
 
   VarPair.ValueEdit := TEdit.Create(Self);
   VarPair.ValueEdit.Parent := Self;
-  VarPair.ValueEdit.NumbersOnly := True;
+  VarPair.ValueEdit.OnKeyPress := EditKeyPress;
 
   VarPair.DeleteButton := TButton.Create(Self);
   VarPair.DeleteButton.Parent := Self;
@@ -312,14 +325,13 @@ begin
   RangePair.StartEdit := TEdit.Create(Self);
   RangePair.StartEdit.Parent := Self;
   RangePair.StartEdit.Text := '0';
-  RangePair.StartEdit.NumbersOnly := True;
+  RangePair.StartEdit.OnKeyPress := EditKeyPress;
 
 
   RangePair.EndEdit := TEdit.Create(Self);
   RangePair.EndEdit.Parent := Self;
   RangePair.EndEdit.Text := '10';
-  RangePair.EndEdit.NumbersOnly := True;
-
+  RangePair.EndEdit.OnKeyPress := EditKeyPress;
 
   RangePair.DeleteButton := TButton.Create(Self);
   RangePair.DeleteButton.Parent := Self;

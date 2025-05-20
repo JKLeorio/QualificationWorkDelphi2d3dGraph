@@ -33,7 +33,7 @@ type
     public
       constructor Create;
       destructor Destroy;
-      function Parse(math_expression : string; out resultData : TQueue<string>) : Boolean;
+      function Parse(math_expression : string; out resultData : TQueue<string>; variables : TDictionary<string, float64>) : Boolean;
       
       function CalculationBySymbol2D(translated_expression : TQueue<string>;
        variables : TDictionary<string, float64>; dependentVar : string;
@@ -41,7 +41,7 @@ type
        
       function CalcPointsByRange(rstart : integer; rend : integer; variables : TDictionary<string,
        float64>; dependentVar : string; range_variable : string;
-        parsed_expression_data : TQueue<string>; out points : TArray<TGraphPoint>; math_expression_copy : array of string) : Boolean;
+       out points : TArray<TGraphPoint>; math_expression_copy : array of string) : Boolean;
         
       procedure SetVariables(variables : TDictionary<string, float64>);
   end;
@@ -164,10 +164,6 @@ function OccurrencesOfChar(const S: string; const C: char): integer;
 
   begin
     inherited Create;
-    variables := TDictionary<string, float64>.Create;
-    variables.Add('x',0);
-    variables.Add('y',0);
-    variables.Add('z',0);
     with addition do
     begin
       func := function(a,b : Float64): Float64 begin Result:= a + b end;
@@ -208,6 +204,7 @@ function OccurrencesOfChar(const S: string; const C: char): integer;
     UNARY_OPERATORS.Add('sin', function(x: Float64): Float64 begin Result := Sin(x); end);
     UNARY_OPERATORS.Add('cos', function(x: Float64): Float64 begin Result := Cos(x); end);
     UNARY_OPERATORS.Add('sqrt', function(x: Float64): Float64 begin Result := Sqrt(x); end);
+    UNARY_OPERATORS.Add('neg', function(x: Float64): Float64 begin Result := -x; end);
   end;
 
   destructor TMathExpressionCalc.Destroy;
@@ -216,7 +213,7 @@ function OccurrencesOfChar(const S: string; const C: char): integer;
     inherited Destroy;
   end;
 
-  function TMathExpressionCalc.Parse(math_expression: string; out resultData : TQueue<string>) : Boolean;
+  function TMathExpressionCalc.Parse(math_expression: string; out resultData : TQueue<string>; variables : TDictionary<string, float64>) : Boolean;
 
   var
   i: Integer;
@@ -234,13 +231,16 @@ function OccurrencesOfChar(const S: string; const C: char): integer;
 
 
   procedure PushNumber(var number : string);
+  begin
+    if Length(number) <> 0 then
     begin
-      if Assigned(resultExpression) then
-      begin
-        resultExpression.Enqueue(number);
-        number := '';
-      end;
+      resultExpression.Enqueue(number);
+      number := '';
+
+      while (stack.Count > 0) and UNARY_OPERATORS.ContainsKey(stack.Peek) do
+        resultExpression.Enqueue(stack.Pop);
     end;
+  end;
 
 
   function IsValid(math_expression: string): Boolean;
@@ -391,10 +391,18 @@ function OccurrencesOfChar(const S: string; const C: char): integer;
 
       else if OPERATORS.ContainsKey(character) then
       begin
-        if Length(number) <> 0 then PushNumber(number);
-        while (stack.Count > 0) and (OPERATORS.ContainsKey(stack.Peek)) and (OPERATORS[stack.Peek].priority >= OPERATORS[character].priority) do
-          resultExpression.Enqueue(stack.Pop);
-        stack.Push(character);
+        if (i = 1) or (math_expression[i - 1] = '(') or OPERATORS.ContainsKey(math_expression[i - 1]) then
+        begin
+          stack.Push('neg');
+        end
+        else
+        begin
+          if Length(number) <> 0 then PushNumber(number);
+          while (stack.Count > 0) and (OPERATORS.ContainsKey(stack.Peek)) and
+                (OPERATORS[stack.Peek].priority >= OPERATORS[character].priority) do
+            resultExpression.Enqueue(stack.Pop);
+          stack.Push(character);
+        end;
       end
 
       else if character = '(' then
@@ -432,203 +440,6 @@ function OccurrencesOfChar(const S: string; const C: char): integer;
 
   end;
 
-
-//  function TMathExpressionCalc.Parse(math_expression: string; out resultData : TQueue<string>) : Boolean;
-//  var
-//    resultExpression : TQueue<string>;
-//    stack : TStack<string>;
-//    character : Char;
-//    buff : Integer;
-//    StackBuff : string;
-//    number : string;
-//    E : Exception;
-//    a,b : Word;
-//
-//    procedure PushNumber(var number : string);
-//    begin
-//      if Assigned(resultExpression) then
-//      begin
-//        resultExpression.Enqueue(number);
-//        number := '';
-//      end;
-//    end;
-//
-//    function IsValid(math_expression : string ) : Boolean;
-//      var
-//
-//      operands_count, operator_count : Word;
-//      character : Char;
-//      buff : Integer;
-//      strBuff : string;
-//      I: Integer;
-//      closeBracketCount, openBracketCount : Word;
-//
-//      begin
-//      for I := 1 to Length(math_expression) do
-//        begin
-//          character := math_expression[I];
-//          if OPERATORS.ContainsKey(character) then
-//            begin
-//              if Length(strBuff) > 0 then
-//              begin
-//                Inc(operands_count);
-//                strBuff := '';
-//              end;
-//              Inc(operator_count);
-//            end
-//          else if character in ['(',')'] then
-//          begin
-//            if character = '(' then
-//              Inc(openBracketCount)
-//            else
-//              Inc(closeBracketCount);
-//
-//            if Length(strBuff) > 0 then
-//            begin
-//              Inc(operands_count);
-//              strBuff := '';
-//            end;
-//          end
-//          else if (variables.ContainsKey(character)) or (TryDecimalStrToInt(character, buff)) then
-//          begin
-//            strBuff := strBuff + character;
-//          end;
-//        end;
-//      if Length(strBuff) > 0 then
-//        begin
-//          Inc(operands_count);
-//          strBuff := '';
-//        end;
-//
-//      if (operands_count-operator_count = 1) and (openBracketCount = closeBracketCount) then
-//          Result := True;
-//      end;
-//
-//  begin
-//    try
-//      stack := TStack<string>.Create;
-//      resultExpression := TQueue<string>.Create;
-//      math_expression := StringReplace(math_expression, ' ', '', [rfReplaceAll]);
-//
-//      if not IsValid(math_expression) then exit;
-//
-//      for character in math_expression do
-//      begin
-//        if (variables.ContainsKey(character)) or (TryDecimalStrToInt(character, buff)) then
-//        begin
-//          number := number + character;
-//        end
-//        else if (character = '.') and (Length(number)>0) then
-//        if (OccurrencesOfChar(number, '.') <> 0) then
-//          raise Exception.Create('number with more than two floating points')
-//        else
-//          begin
-//            number := number + character;
-//          end
-//        else if OPERATORS.ContainsKey(character) then
-//        begin
-//          if Length(number) <> 0 then PushNumber(number);
-//          with OPERATORS do
-//          begin
-//            while (stack.Count <> 0) and (stack.Peek <> '(') and (Items[stack.Peek].priority >= Items[character].priority) do
-//            begin
-//              resultExpression.Enqueue(stack.Extract);
-//            end;
-//            stack.Push(character);
-//          end;
-//        end
-//        else if character = '(' then
-//        begin
-//          if Length(number) <> 0 then PushNumber(number);
-//          stack.Push(character);
-//        end
-//        else if character = ')' then
-//        begin
-//          if Length(number) <> 0 then PushNumber(number);
-//
-//          while (stack.Count <> 0) do
-//          begin
-//            StackBuff := stack.Extract;
-//            if StackBuff = '(' then break;
-//            resultExpression.Enqueue(StackBuff);
-//          end;
-//        end;
-//      end;
-//      if Length(number) <> 0 then PushNumber(number);
-//
-//      while stack.Count <> 0 do
-//      begin
-//        resultExpression.Enqueue(stack.Extract);
-//      end;
-//      resultExpression.TrimExcess;
-//      resultData := resultExpression;
-//      Result := True;
-//
-//    except
-//    on E : Exception do
-//      raise Exception.Create('error in parse  -' + E.Message);
-//    end;
-//  end;
-
-//function TMathExpressionCalc.CalculationBySymbol2D(translated_expression: TQueue<string>; variables: TDictionary<string, float64>;  res_variable : string; out resultPoint : TPoint2d) : Boolean;
-//  var
-//    stack : TStack<Float64>;
-//    buff : Float64;
-//    number : string;
-//    character : string;
-//    E: Exception;
-//    func : TFunction;
-//    a,b : Float64;
-//    c : Integer;
-//  begin
-//    stack := TStack<Float64>.Create;
-//    while translated_expression.Count <> 0 do
-//      begin
-//        if (stack.Count > 1) and (OPERATORS.ContainsKey(translated_expression.Peek)) then
-//        begin
-//          func := OPERATORS.Items[translated_expression.Extract].func;
-//          a := stack.Extract;
-//          b := stack.Extract;
-//          stack.Push(func(b, a));
-//        end
-//        else
-//        begin
-//          if TryStrToFloat(translated_expression.Peek, buff) then
-//          begin
-//          stack.Push(buff);
-//          translated_expression.Extract;
-//          end
-//          else if variables.ContainsKey(translated_expression.Peek[1]) then
-//          begin
-//            if variables.ContainsKey(translated_expression.Peek) then
-//            begin
-//              stack.Push(variables.Items[translated_expression.Peek]);
-//            end;
-//
-//            translated_expression.Extract;
-//          end
-//          else
-//          begin
-//            break;
-//          end;
-//        end;
-//        if stack.Count = 1 then
-//        begin
-//        if res_variable = 'x' then
-//          begin
-//            resultPoint.x := stack.Extract;
-//            resultPoint.y :=  variables.Items[res_variable];
-//            Result := True;
-//          end
-//        else if res_variable = 'y' then
-//          begin
-//            resultPoint.x := stack.Extract;
-//            resultPoint.y := variables.Items[res_variable];
-//            Result := True;
-//          end;
-//        end;
-//      end;
-//  end;
 
 
 function TMathExpressionCalc.CalculationBySymbol2D(
@@ -711,6 +522,7 @@ function TMathExpressionCalc.CalculationBySymbol2D(
             resultPoint.y := variables.Items['y'];
             resultPoint.x := variables.Items['x'];
             resultPoint.z := stack.Extract;
+            Result := True;
            end
         else
           raise Exception.Create('Unknown res_variable: "' + dependentVar + '"');
@@ -722,7 +534,7 @@ function TMathExpressionCalc.CalculationBySymbol2D(
 
   function TMathExpressionCalc.CalcPointsByRange(rstart : integer; rend : integer;
    variables : TDictionary<string, float64>;
-   dependentVar : string; range_variable : string; parsed_expression_data : TQueue<string>;
+   dependentVar : string; range_variable : string;
     out points : TArray<TGraphPoint>; math_expression_copy : array of string) : Boolean;
   var
     I, I2 : Integer;
@@ -731,28 +543,30 @@ function TMathExpressionCalc.CalculationBySymbol2D(
     parsed_expression : TQueue<string>;
     elem : string;
     begin
-    parsed_expression := parsed_expression_data;
-    if parsed_expression.Count <> 0 then
+    parsed_expression := TQueue<string>.Create;
+    SetLength(points, Abs(rstart - rend)+1);
+    if rstart < rend then
       begin
-      SetLength(points, Abs(rstart - rend));
-      if rstart < rend then
+        for I := 0 to Abs(rstart - rend)-1 do
         begin
-          for I := 0 to Abs(rstart - rend)-1 do
+        for I2:=0 to Length(math_expression_copy)-1 do
           begin
-          for I2:=0 to Length(math_expression_copy)-1 do
-            begin
-              parsed_expression.Enqueue(math_expression_copy[I2]);
-            end;
-            variables.AddOrSetValue(range_variable, I+rstart);
-            if CalculationBySymbol2D(parsed_expression, variables, dependentVar, range_variable, point) then
-            begin
-              points[I] := point;
-            end;
+            parsed_expression.Enqueue(math_expression_copy[I2]);
           end;
-        end
-        else raise Exception.Create('0');
+          variables.AddOrSetValue(range_variable, I+rstart);
+          if CalculationBySymbol2D(parsed_expression, variables, dependentVar, range_variable, point) then
+          begin
+            points[I] := point;
+          end;
+        end;
+        for I2:=0 to Length(math_expression_copy)-1 do
+          begin
+            parsed_expression.Enqueue(math_expression_copy[I2]);
+          end;
+          variables.AddOrSetValue(range_variable, I+rstart+1);
+          if CalculationBySymbol2D(parsed_expression, variables, dependentVar, range_variable, point) then points[I] := point;
       end
-      else raise Exception.Create('1');
+      else raise Exception.Create('0');
     Result := True;
     end;
 
