@@ -33,7 +33,6 @@ implementation
 uses
   OpenGL;
 
-{ TOpenGLControl }
 
 constructor TOpenGLControl.Create(AOwner: TComponent);
 begin

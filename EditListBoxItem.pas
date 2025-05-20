@@ -249,7 +249,7 @@ begin
   FDependentLabel.SetBounds(72, 11, 25, 23);
   FDependentVarEdit.SetBounds(80, 10, 25,24);
   FMainEdit.SetBounds(115, 10, 200, 23);
-  FDeleteButton.SetBounds(280, 10, 30, 23);
+  FDeleteButton.SetBounds(300, 10, 30, 23);
 
   FAddVarButton.SetBounds(10, 40, 120, 23);
   FAddRangeButton.SetBounds(130, 40, 120, 23);

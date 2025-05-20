@@ -23,6 +23,8 @@ type
     Panel4: TPanel;
     Button4: TButton;
     Button5: TButton;
+    Button6: TButton;
+    Button7: TButton;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure OpenGLControlPaint(Sender : TObject);
@@ -31,9 +33,13 @@ type
     procedure AddEditListBoxItem3d(Sender: TObject);
     procedure CalculateAll(sender : Tobject);
     procedure OnClickBoxItemHide(sender : TObject);
+    procedure ZoomInBtnClick(Sender: TObject);
+    procedure ZoomOutBtnClick(Sender: TObject);
+    procedure FormMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
   private
     ChildWindow : TForm;
   public
+
     items_points : TDictionary<TEditlistBoxitem, TArray<TGraphPoint>>;
     procedure DrawGraphs2d;
     procedure OnClickBoxItemCalc(sender : TObject);
@@ -50,6 +56,12 @@ var
   MathExpressionCalc : TMathExpressionCalc;
   EditListBox2d : TEditListBox;
   EditlistBox3d : TEditListBox;
+  BaseFont: Cardinal;
+  Zoom: Float32 = 1.0;
+const
+  MinZoom = 0.02;
+  MaxZoom = 5.0;
+
 
 procedure CallListBoxArrange2d;
 procedure CallListBoxArrange3d;
@@ -60,6 +72,117 @@ uses
   OpenGL, MathUtils;
 
 {$R *.dfm}
+
+
+procedure SetZoom(Value: Float32);
+begin
+  if Value < MinZoom then
+    Zoom := MinZoom
+  else if Value > MaxZoom then
+    Zoom := MaxZoom
+  else
+    Zoom := Value;
+
+  FOpenGLControl.Invalidate;
+end;
+
+procedure TForm1.ZoomInBtnClick(Sender: TObject);
+const
+  ZoomFactor = 0.9;
+begin
+  SetZoom(Zoom * ZoomFactor);
+  FOpenGLControl.Invalidate;
+end;
+
+procedure TForm1.ZoomOutBtnClick(Sender: TObject);
+const
+  ZoomFactor = 1.1;
+begin
+  SetZoom(Zoom * ZoomFactor);
+  FOpenGLControl.Invalidate;
+end;
+
+
+
+
+procedure InitFont(hdc: HDC);
+var
+  font: HFONT;
+begin
+  BaseFont := glGenLists(256);
+  font := CreateFont(
+    -12, 0, 0, 0, FW_NORMAL, 0, 0, 0,
+    ANSI_CHARSET, OUT_DEFAULT_PRECIS,
+    CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
+    FF_DONTCARE or DEFAULT_PITCH,
+    'Courier New'
+  );
+
+  SelectObject(hdc, font);
+  wglUseFontBitmaps(hdc, 0, 256, BaseFont);
+end;
+
+
+procedure TForm1.FormMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+var
+  pt: TPoint;
+const
+  ZoomFactor = 1.1;
+begin
+  pt := FOpenGLControl.ScreenToClient(MousePos);
+
+  if (pt.X >= 0) and (pt.X < FOpenGLControl.Width) and
+     (pt.Y >= 0) and (pt.Y < FOpenGLControl.Height) then
+  begin
+    if WheelDelta > 0 then
+      SetZoom(Zoom * ZoomFactor)
+    else
+      SetZoom(Zoom / ZoomFactor);
+
+    FOpenGLControl.Invalidate;
+    Handled := True;
+  end;
+end;
+
+
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+
+  Self.OnMouseWheel := FormMouseWheel;
+
+  MathExpressionCalc := TMathExpressionCalc.Create();
+
+  items_points := TDictionary<TEditlistBoxitem, TArray<TGraphPoint>>.Create;
+
+  FOpenGLControl := TOpenGLControl.Create(nil);
+  FOpenGLControl.Parent := Panel1;
+  FOpenGLControl.Align := alClient;
+  FOpenGLControl.Visible := True;
+  FOpenGLControl.OnPaint := OpenGLControlPaint;
+//  FOpenGLControl.OnMouseWheel := OpenGLControlMouseWheel;
+
+//  FOpenGLControl3d := TOpenGLControl.Create(nil);
+//  FOpenGLControl3d.Parent := Panel3;
+//  FOpenGLControl3d.Align := alClient;
+//  FOpenGLControl3d.Visible := True;
+//  FOpenGLControl3d.OnPaint := OpenGLControlPaint;
+
+
+  EditListBox2d := TEditListBox.Create(nil);
+  EditListBox2d.Parent := Panel2;
+  EditListBox2d.Align := alClient;
+  EditListBox2d.onBoxItemCalcMethod := OnClickBoxItemCalc;
+  EditlistBox2d.onBoxItemHideMethod := OnClickBoxItemHide;
+
+  EditlistBox3d := TEditListBox.Create(nil);
+  EditlistBox3d.Parent := Panel4;
+  EditlistBox3d.Align := alClient;
+
+  glClearColor(1, 1, 1, 1);
+
+end;
+
 
 
 procedure TForm1.OnClickBoxItemCalc(sender : TObject);
@@ -90,7 +213,7 @@ procedure TForm1.OnClickBoxItemCalc(sender : TObject);
       begin
         pointsList := TList<TGraphPoint>.Create;
         item := TEditListBoxItem(btn.Parent);
-        if not item.IfChangedGetMainEditData(math_expression) then
+        if not item.IfChangedGetMainEditData(math_expression) and items_points.ContainsKey(item) and (High(items_points.Items[item]) > 0) then
           Exit;
         item.GetVariables(variables);
         item.GetRanges(ranges);
@@ -100,6 +223,7 @@ procedure TForm1.OnClickBoxItemCalc(sender : TObject);
         is_x := True;
         is_y := True;
         is_z := True;
+        edited := True;
 
 
 
@@ -218,37 +342,7 @@ procedure TForm1.DrawGraphs2d;
     end;
   end;
 
-procedure TForm1.FormCreate(Sender: TObject);
-begin
-  MathExpressionCalc := TMathExpressionCalc.Create();
 
-  items_points := TDictionary<TEditlistBoxitem, TArray<TGraphPoint>>.Create;
-
-  FOpenGLControl := TOpenGLControl.Create(nil);
-  FOpenGLControl.Parent := Panel1;
-  FOpenGLControl.Align := alClient;
-  FOpenGLControl.Visible := True;
-  FOpenGLControl.OnPaint := OpenGLControlPaint;
-
-  FOpenGLControl3d := TOpenGLControl.Create(nil);
-  FOpenGLControl3d.Parent := Panel3;
-  FOpenGLControl3d.Align := alClient;
-  FOpenGLControl3d.Visible := True;
-  FOpenGLControl3d.OnPaint := OpenGLControlPaint;
-
-  EditListBox2d := TEditListBox.Create(nil);
-  EditListBox2d.Parent := Panel2;
-  EditListBox2d.Align := alClient;
-  EditListBox2d.onBoxItemCalcMethod := OnClickBoxItemCalc;
-  EditlistBox2d.onBoxItemHideMethod := OnClickBoxItemHide;
-
-  EditlistBox3d := TEditListBox.Create(nil);
-  EditlistBox3d.Parent := Panel4;
-  EditlistBox3d.Align := alClient;
-
-  glClearColor(1, 1, 1, 1);
-
-end;
 
 procedure TForm1.FormDestroy(Sender: TObject);
 begin
@@ -268,20 +362,34 @@ begin
 end;
 
 
-procedure TForm1.OpenGLControlPaint(sender : Tobject);
+procedure TForm1.OpenGLControlPaint(Sender: TObject);
+var
+  w, h: Integer;
 begin
-  glViewport(0, 0, FOpenGLControl.Width, FOpenGLControl.Height);
+  w := FOpenGLControl.Width;
+  h := FOpenGLControl.Height;
+
+  if BaseFont = 0 then
+    InitFont(wglGetCurrentDC);
+
+  glViewport(0, 0, w, h);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity;
-  gluOrtho2D(-50, 50, -50, 50);
+
+  gluOrtho2D(-50 * Zoom, 50 * Zoom, -50 * Zoom, 50 * Zoom);
+
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity;
+
   glClear(GL_COLOR_BUFFER_BIT);
   glColor3f(0, 0, 0);
-  DrawCoordinate;
+
+  DrawCoordinate(BaseFont, Zoom);
   DrawGraphs2d;
+
   SwapBuffers(wglGetCurrentDC);
 end;
+
 
 
 

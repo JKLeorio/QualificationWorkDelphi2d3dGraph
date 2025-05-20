@@ -1,53 +1,56 @@
-unit DrawUtils;
+﻿unit DrawUtils;
 
 interface
 
-uses OpenGL, Parser, System.SysUtils, Vcl.Dialogs, Vcl.Graphics, Windows;
+uses OpenGL, Parser, System.SysUtils, Vcl.Dialogs, Vcl.Graphics, Windows, System.Math;
 
-procedure DrawOs(alfa : Float32);
+procedure DrawOs(alfa: Float32; zoom: Float32);
 
-procedure DrawGraph(points : TArray<TGraphPoint>);
+procedure DrawCoordinate(basefont: Cardinal; zoom: Float32);
 
-procedure DrawCoordinate;
+procedure DrawGraph(points: TArray<TGraphPoint>);
 
 procedure SetGLColor(Color: TColor);
 
+procedure glPrint(x, y: Float32; text: string; basefont: Cardinal);
+
 implementation
 
-procedure DrawOs(alfa : Float32);
-  var
-    d : Float32;
-    l : Float32;
-  begin
-    d:= 0.05;
-    l:= 50;
-    glPushMatrix();
-    glRotate(alfa, 0, 0, 1);
-    glBegin(GL_LINES);
-      glVertex2d(-1 * l, 0);
-      glVertex2d(1 * l, 0);
-      glVertex2d(1 * l, 0);
-      glVertex2d(1 * l - d * l, 0 + d * l);
-      glVertex2d(1 * l, 0);
-      glVertex2d(1 * l - d * l, 0 - d * l);
-    glEnd;
-    glPopMatrix;
-  end;
+procedure DrawOs(alfa, zoom: Float32);
+var
+  d, l: Float32;
+begin
+  d := 0.05;
+  l := 50 * zoom;
 
-procedure DrawGraph(points : TArray<TGraphPoint>);
-  var
-    I : Integer;
-  begin
-    if Length(points) < 1 then raise Exception.Create('3');
-    glLineWidth(2);
-    glBegin(GL_LINE_STRIP);
-    for I := 0 to High(points)-1 do
-    begin
-        glVertex2f(points[i].x, points[i].y);
-    end;
-    glEnd;
-    
-  end;
+  glPushMatrix;
+  glRotate(alfa, 0, 0, 1);
+
+  glBegin(GL_LINES);
+    glVertex2d(-l, 0);
+    glVertex2d( l, 0);
+    glVertex2d(l, 0);
+    glVertex2d(l - d * l, d * l);
+    glVertex2d(l, 0);
+    glVertex2d(l - d * l, -d * l);
+  glEnd;
+
+  glPopMatrix;
+end;
+
+
+procedure DrawGraph(points: TArray<TGraphPoint>);
+var
+  I: Integer;
+begin
+  if Length(points) < 1 then raise Exception.Create('3');
+  glLineWidth(2);
+  glBegin(GL_LINE_STRIP);
+  for I := 0 to High(points) do
+    glVertex2f(points[i].x, points[i].y);
+  glEnd;
+end;
+
 
 procedure SetGLColor(Color: TColor);
 var
@@ -60,14 +63,45 @@ begin
   glColor3f(R / 255, G / 255, B / 255);
 end;
 
-procedure DrawCoordinate;
+
+
+procedure DrawCoordinate(basefont: Cardinal; zoom : float32);
+var
+  i: Integer;
+  step, range: Integer;
+  l: Float32;
 begin
+  l := 1;
+
   glLineWidth(2);
-  glColor3b(30,50,90);
-  DrawOs(0);
-  glColor3b(90,50,30);
-  DrawOs(90);
-  glColor3b(100,90,80);
+  glColor3b(30, 50, 90);
+  DrawOs(0, zoom);
+  glColor3b(90, 50, 30);
+  DrawOs(90, zoom);
+
+  step := 10;
+
+  range := Trunc(50 * Zoom);
+
+  for i := -range to range do
+    if (i mod step = 0) and (i <> 0) then
+      glPrint(i, -0.5, IntToStr(i), basefont);
+
+  for i := -range to range do
+    if (i mod step = 0) and (i <> 0) then
+      glPrint(0.5 , i, IntToStr(i), basefont);
+end;
+
+
+
+procedure glPrint(x, y: Float32; text: string; basefont : Cardinal);
+begin
+  glColor3f(1.0, 1.0, 1.0);
+  glRasterPos2f(x, y);
+  glPushAttrib(GL_LIST_BIT);
+  glListBase(basefont);
+  glCallLists(Length(text), GL_UNSIGNED_BYTE, PAnsiChar(AnsiString(text)));
+  glPopAttrib;
 end;
 
 end.

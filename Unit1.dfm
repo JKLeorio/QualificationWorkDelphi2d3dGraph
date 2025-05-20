@@ -48,14 +48,6 @@ object Form1: TForm1
         BorderStyle = bsSingle
         TabOrder = 2
       end
-      object Button1: TButton
-        Left = 1034
-        Top = 556
-        Width = 75
-        Height = 25
-        Caption = 'FScreen'
-        TabOrder = 3
-      end
       object Panel1: TPanel
         Left = 516
         Top = 17
@@ -63,6 +55,32 @@ object Form1: TForm1
         Height = 576
         BorderStyle = bsSingle
         TabOrder = 4
+      end
+      object Button6: TButton
+        Left = 965
+        Top = 592
+        Width = 43
+        Height = 25
+        Caption = '+'
+        TabOrder = 5
+        OnClick = ZoomOutBtnClick
+      end
+      object Button1: TButton
+        Left = 1014
+        Top = 592
+        Width = 95
+        Height = 25
+        Caption = 'FScreen'
+        TabOrder = 3
+      end
+      object Button7: TButton
+        Left = 918
+        Top = 592
+        Width = 41
+        Height = 25
+        Caption = '-'
+        TabOrder = 6
+        OnClick = ZoomInBtnClick
       end
     end
     object TabSheet2: TTabSheet

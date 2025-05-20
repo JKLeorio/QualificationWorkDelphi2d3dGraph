@@ -111,7 +111,7 @@ begin
   begin
     Item := FEditListBoxItems[i];
     Item.SetBounds(0, TopPos, ClientWidth+50, Item.Height);
-    TopPos := TopPos + Item.Height;
+    TopPos := TopPos + Item.Height-50;
   end;
 end;
 
