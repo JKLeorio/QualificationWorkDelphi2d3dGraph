@@ -300,7 +300,7 @@ begin
   self.Height := Self.Height + VarPair.NameEdit.Height;
   FVariables.Add(VarPair);
   Arrange;
-  CallListBoxArrange2d;
+  CallListBoxArrange;
 end;
 
 
@@ -342,7 +342,7 @@ begin
   FRanges.Add(RangePair);
   self.Height := Self.Height + RangePair.NameEdit.Height;
   Arrange;
-  CallListBoxArrange2d;
+  CallListBoxArrange;
 end;
 
 procedure TEditListBoxItem.OnDeleteRangeClick(Sender: TObject);
@@ -366,7 +366,7 @@ begin
       Pair.Free;
       Break;
       Arrange;
-      CallListBoxArrange2d;
+      CallListBoxArrange;
     end;
   end;
 
@@ -392,7 +392,7 @@ begin
       FVariables.Delete(i);
 
       Arrange;
-      CallListBoxArrange2d;
+      CallListBoxArrange;
       Break;
     end;
   end;

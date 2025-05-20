@@ -81,8 +81,7 @@ const
   MaxZoom = 5.0;
 
 
-procedure CallListBoxArrange2d;
-procedure CallListBoxArrange3d;
+procedure CallListBoxArrange;
 
 implementation
 
@@ -689,16 +688,12 @@ procedure TForm1.CalculateAll(sender : Tobject);
     end;
   end;
 
-procedure CallListBoxArrange2d;
+procedure CallListBoxArrange;
   begin
     EditListBox2d.ArrangeEdits;
+    EditlistBox3d.ArrangeEdits;
   end;
 
-
-procedure CallListBoxArrange3d;
-  begin
-    EditListBox3d.ArrangeEdits;
-  end;
 
 
 end.

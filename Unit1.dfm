@@ -22,7 +22,7 @@ object Form1: TForm1
     TabOrder = 0
     OnChange = pagecontrolchange
     object TabSheet1: TTabSheet
-      Caption = 'TabSheet1'
+      Caption = '2D'
       object Button2: TButton
         Left = 96
         Top = 606
@@ -85,7 +85,7 @@ object Form1: TForm1
       end
     end
     object TabSheet2: TTabSheet
-      Caption = 'TabSheet2'
+      Caption = '3D'
       ImageIndex = 1
       object Panel3: TPanel
         Left = 512
