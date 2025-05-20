@@ -25,6 +25,10 @@ type
     Button5: TButton;
     Button6: TButton;
     Button7: TButton;
+    Button8: TButton;
+    Button9: TButton;
+    Button10: TButton;
+    Button11: TButton;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure OpenGLControlPaint(Sender : TObject);
@@ -36,12 +40,22 @@ type
     procedure ZoomInBtnClick(Sender: TObject);
     procedure ZoomOutBtnClick(Sender: TObject);
     procedure FormMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+    procedure pagecontrolchange(Sender: TObject);
+    procedure OpenGLControlPaint3d(Sender : TObject);
+    procedure Panel3dMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+    procedure Panel3dMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+    procedure Panel3dMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+    procedure BtnViewXYClick(Sender: TObject);
+    procedure BtnViewXZClick(Sender: TObject);
+    procedure BtnViewYZClick(Sender: TObject);
+
   private
     ChildWindow : TForm;
+    FirstCameraSetupDone: Boolean;
   public
 
     items_points : TDictionary<TEditlistBoxitem, TArray<TGraphPoint>>;
-    procedure DrawGraphs2d;
+    procedure DrawGraphs;
     procedure OnClickBoxItemCalc(sender : TObject);
 
   end;
@@ -58,6 +72,10 @@ var
   EditlistBox3d : TEditListBox;
   BaseFont: Cardinal;
   Zoom: Float32 = 1.0;
+  ZoomLevel: Single = 1.0;
+  RotationX, RotationY: Single;
+  LastMouseX, LastMouseY: Integer;
+  IsRotating: Boolean = False;
 const
   MinZoom = 0.02;
   MaxZoom = 5.0;
@@ -73,6 +91,145 @@ uses
 
 {$R *.dfm}
 
+
+procedure TForm1.BtnViewXYClick(Sender: TObject);
+begin
+  RotationX := 0;
+  RotationY := 0;
+  FOpenGLControl3d.Invalidate;
+end;
+
+procedure TForm1.BtnViewXZClick(Sender: TObject);
+begin
+  RotationX := 90;
+  RotationY := 0;
+  FOpenGLControl3d.Invalidate;
+end;
+
+procedure TForm1.BtnViewYZClick(Sender: TObject);
+begin
+  RotationX := 0;
+  RotationY := 90;
+  FOpenGLControl3d.Invalidate;
+end;
+
+
+
+procedure TForm1.Panel3dMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  if Button = mbLeft then
+  begin
+    IsRotating := True;
+    LastMouseX := X;
+    LastMouseY := Y;
+  end;
+end;
+
+procedure TForm1.Panel3dMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  IsRotating := False;
+end;
+
+procedure TForm1.Panel3dMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+begin
+  if IsRotating then
+  begin
+    RotationX := RotationX + (Y - LastMouseY);
+    RotationY := RotationY + (X - LastMouseX);
+    LastMouseX := X;
+    LastMouseY := Y;
+    FOpenGLControl3d.Invalidate;
+  end;
+end;
+
+
+procedure TForm1.DrawGraphs;
+  var
+  I : Integer;
+  item : TEditListBoxItem;
+  items : TObjectList<TEditListBoxItem>;
+  editlistbox : TEditListBox;
+  points : TArray<TGraphPoint>;
+  proc : Tproc<TArray<TGraphPoint>>;
+  begin
+    if PageControl1.ActivePage = TabSheet1 then
+    begin
+      editlistbox := EditListBox2d;
+      proc := DrawGraph;
+    end
+    else if PageControl1.ActivePage = TabSheet2 then
+    begin
+      editlistbox := EditlistBox3d;
+      proc := DrawGraph3d;
+    end;
+    items := editlistbox.ListBoxItems;
+    for I := 0 to items.Count-1 do
+    begin
+      item := items[i];
+      if not item.IsGraphHidden then
+        if items_points.ContainsKey(item) then
+        begin
+          points := items_points.Items[item];
+          SetGLColor(item.SelectedColor);
+            proc(points);
+        end;
+    end;
+  end;
+
+procedure TForm1.OpenGLControlPaint3d(Sender: TObject);
+var
+  w, h: Integer;
+begin
+  w := FOpenGLControl3D.Width;
+  h := FOpenGLControl3D.Height;
+  glViewport(0, 0, w, h);
+
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity;
+  gluPerspective(45.0, w / h, 0.1, 1000.0);
+
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity;
+
+  if not FirstCameraSetupDone then
+  begin
+    RotationX := 30;
+    RotationY := 45;
+    FirstCameraSetupDone := True;
+  end;
+
+  glTranslatef(0.0, 0.0, -300 / ZoomLevel);
+  glRotatef(RotationX, 1, 0, 0);
+  glRotatef(RotationY, 0, 1, 0);
+
+  glClearColor(0.0, 0.0, 0.0, 1.0);
+  glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT);
+
+  DrawCoordinate3d(BaseFont, ZoomLevel);
+  DrawGraphs;
+
+  SwapBuffers(wglGetCurrentDC);
+end;
+
+
+
+procedure TForm1.pagecontrolchange(sender: TObject);
+begin
+  if PageControl1.ActivePage = TabSheet1 then
+  begin
+    FOpenGLControl.MakeCurrent;
+    if FOpenGLControl.IsCurrent then
+      ShowMessage('2d');
+    FOpenGLControl.Repaint;
+  end
+  else if PageControl1.ActivePage = TabSheet2 then
+  begin
+    FOpenGLControl3D.MakeCurrent;
+    if FOpenGLControl3d.IsCurrent then
+      ShowMessage('3d');
+    FOpenGLControl3D.Repaint;
+  end;
+end;
 
 procedure SetZoom(Value: Float32);
 begin
@@ -124,30 +281,48 @@ end;
 
 
 procedure TForm1.FormMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
-var
-  pt: TPoint;
-const
-  ZoomFactor = 1.1;
-begin
-  pt := FOpenGLControl.ScreenToClient(MousePos);
-
-  if (pt.X >= 0) and (pt.X < FOpenGLControl.Width) and
-     (pt.Y >= 0) and (pt.Y < FOpenGLControl.Height) then
+  var
+    pt: TPoint;
+  const
+    ZoomFactor = 1.1;
   begin
-    if WheelDelta > 0 then
-      SetZoom(Zoom * ZoomFactor)
-    else
-      SetZoom(Zoom / ZoomFactor);
+  if PageControl1.ActivePage = TabSheet1 then
+    begin
+      pt := FOpenGLControl.ScreenToClient(MousePos);
 
-    FOpenGLControl.Invalidate;
-    Handled := True;
+    if (pt.X >= 0) and (pt.X < FOpenGLControl.Width) and (pt.Y >= 0) and (pt.Y < FOpenGLControl.Height) then
+       begin
+
+        if WheelDelta > 0 then
+          SetZoom(Zoom * ZoomFactor)
+        else
+          SetZoom(Zoom / ZoomFactor);
+        FOpenGLControl.Invalidate;
+        Handled := True;
+      end
+    end
+    else if PageControl1.ActivePage = TabSheet2 then
+      begin
+        pt := FOpenGLControl3D.ScreenToClient(MousePos);
+        if  (pt.X >= 0) and (pt.X < FOpenGLControl3D.Width) and (pt.Y >= 0) and (pt.Y < FOpenGLControl3D.Height) then
+        begin
+          if WheelDelta > 0 then
+          ZoomLevel := ZoomLevel * 1.1
+          else
+          ZoomLevel := ZoomLevel / 1.1;
+          FOpenGLControl3d.Invalidate;
+          Handled := True;
+        end;
+      end;
+
   end;
-end;
 
 
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
+
+  FirstCameraSetupDone := False;
 
   Self.OnMouseWheel := FormMouseWheel;
 
@@ -155,18 +330,21 @@ begin
 
   items_points := TDictionary<TEditlistBoxitem, TArray<TGraphPoint>>.Create;
 
+  FOpenGLControl3d := TOpenGLControl.Create(nil);
+  FOpenGLControl3d.Parent := Panel3;
+  FOpenGLControl3d.Align := alClient;
+  FOpenGLControl3d.Visible := True;
+  FOpenGLControl3d.OnPaint := OpenGLControlPaint3d;
+  FOpenGLControl3D.OnMouseDown := Panel3dMouseDown;
+  FOpenGLControl3D.OnMouseMove := Panel3dMouseMove;
+  FOpenGLControl3D.OnMouseUp := Panel3dMouseUp;
+
   FOpenGLControl := TOpenGLControl.Create(nil);
   FOpenGLControl.Parent := Panel1;
   FOpenGLControl.Align := alClient;
   FOpenGLControl.Visible := True;
   FOpenGLControl.OnPaint := OpenGLControlPaint;
-//  FOpenGLControl.OnMouseWheel := OpenGLControlMouseWheel;
 
-//  FOpenGLControl3d := TOpenGLControl.Create(nil);
-//  FOpenGLControl3d.Parent := Panel3;
-//  FOpenGLControl3d.Align := alClient;
-//  FOpenGLControl3d.Visible := True;
-//  FOpenGLControl3d.OnPaint := OpenGLControlPaint;
 
 
   EditListBox2d := TEditListBox.Create(nil);
@@ -178,6 +356,8 @@ begin
   EditlistBox3d := TEditListBox.Create(nil);
   EditlistBox3d.Parent := Panel4;
   EditlistBox3d.Align := alClient;
+  EditListBox3d.onBoxItemCalcMethod := OnClickBoxItemCalc;
+  EditlistBox3d.onBoxItemHideMethod := OnClickBoxItemHide;
 
   glClearColor(1, 1, 1, 1);
 
@@ -321,26 +501,6 @@ procedure TForm1.OnClickBoxItemHide(sender : TObject);
     end;
   end;
 
-procedure TForm1.DrawGraphs2d;
-  var
-  I : Integer;
-  item : TEditListBoxItem;
-  items : TObjectList<TEditListBoxItem>;
-  points : TArray<TGraphPoint>;
-  begin
-    items := EditListBox2d.ListBoxItems;
-    for I := 0 to items.Count-1 do
-    begin
-      item := items[i];
-      if not item.IsGraphHidden then
-        if items_points.ContainsKey(item) then
-        begin
-          points := items_points.Items[item];
-          SetGLColor(item.SelectedColor);
-          DrawGraph(points);
-        end;
-    end;
-  end;
 
 
 
@@ -385,7 +545,7 @@ begin
   glColor3f(0, 0, 0);
 
   DrawCoordinate(BaseFont, Zoom);
-  DrawGraphs2d;
+  DrawGraphs;
 
   SwapBuffers(wglGetCurrentDC);
 end;
@@ -423,9 +583,18 @@ procedure TForm1.CalculateAll(sender : Tobject);
     symbol, buff : string;
     is_x, is_y, is_z, edited : Boolean;
     dependentVar : string;
+    editlistbox : TEditListBox;
   begin
+    if PageControl1.ActivePage = TabSheet1 then
+    begin
+      editlistbox := EditListBox2d
+    end
+    else if PageControl1.ActivePage = TabSheet2 then
+    begin
+      editlistbox := EditlistBox3d;
+    end;
     variables_dict := TDictionary<string, float64>.Create;
-    items := EditListBox2d.ListBoxItems;
+    items := editlistbox.ListBoxItems;
     pointsList := TList<TGraphPoint>.Create;
     for I := 0 to items.Count-1 do
     begin
@@ -485,7 +654,6 @@ procedure TForm1.CalculateAll(sender : Tobject);
       if not edited then Continue;
 
       math_expression := SolveExpressionSymPy(math_expression, dependentVar);
-      ShowMessage(math_expression);
       if MathExpressionCalc.Parse(math_expression, parsed_data, variables_dict) then
         begin
         if parsed_data.Count <> 0 then

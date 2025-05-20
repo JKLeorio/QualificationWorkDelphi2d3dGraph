@@ -145,7 +145,7 @@ begin
   inherited Create(AOwner);
 
   FRanges := TList<TRangePair>.Create;
-  FMaxRanges := 1;
+  FMaxRanges := 2;
 
   Height := 150;
   BevelOuter := bvNone;

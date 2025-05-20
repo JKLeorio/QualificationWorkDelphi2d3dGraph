@@ -14,6 +14,12 @@ procedure SetGLColor(Color: TColor);
 
 procedure glPrint(x, y: Float32; text: string; basefont: Cardinal);
 
+procedure DrawCoordinate3D(BaseFont: Cardinal; Zoom: Float32);
+
+procedure DrawGraph3d(points: TArray<TGraphPoint>);
+
+procedure glPrint3D(x, y, z: Float32; const text: string; BaseFont: Cardinal);
+
 implementation
 
 procedure DrawOs(alfa, zoom: Float32);
@@ -48,6 +54,18 @@ begin
   glBegin(GL_LINE_STRIP);
   for I := 0 to High(points) do
     glVertex2f(points[i].x, points[i].y);
+  glEnd;
+end;
+
+procedure DrawGraph3d(points: TArray<TGraphPoint>);
+var
+  I: Integer;
+begin
+  if Length(points) < 1 then raise Exception.Create('3');
+  glLineWidth(2);
+  glBegin(GL_LINE_STRIP);
+  for I := 0 to High(points) do
+    glVertex3f(points[i].x, points[i].y, points[i].z);
   glEnd;
 end;
 
@@ -103,6 +121,74 @@ begin
   glCallLists(Length(text), GL_UNSIGNED_BYTE, PAnsiChar(AnsiString(text)));
   glPopAttrib;
 end;
+
+
+procedure DrawCoordinate3D(BaseFont: Cardinal; Zoom: Float32);
+const
+  AxisLength = 50.0;
+var
+  i, step: Integer;
+  scaledLength: Float32;
+  axisColorX, axisColorY, axisColorZ: array[0..2] of Float32;
+begin
+  scaledLength := AxisLength * Zoom;
+
+  // Нарисовать оси
+  glLineWidth(2.0);
+  glBegin(GL_LINES);
+    // X
+    glColor3f(1, 0, 0);
+    glVertex3f(-scaledLength, 0, 0);
+    glVertex3f(scaledLength, 0, 0);
+    // Y
+    glColor3f(0, 1, 0);
+    glVertex3f(0, -scaledLength, 0);
+    glVertex3f(0, scaledLength, 0);
+    // Z
+    glColor3f(0, 0, 1);
+    glVertex3f(0, 0, -scaledLength);
+    glVertex3f(0, 0, scaledLength);
+  glEnd;
+
+  // Шаг надписей в зависимости от масштаба
+  if Zoom < 0.2 then step := 10
+  else if Zoom < 0.5 then step := 5
+  else if Zoom < 1 then step := 2
+  else step := 1;
+
+  // Подписи по X
+  glColor3f(0.1, 0.1, 0.1);
+  for i := -Round(AxisLength) to Round(AxisLength) do
+    if (i mod step = 0) and (i <> 0) then
+      glPrint3D(i, 0, 0, IntToStr(i), BaseFont);
+
+  // Подписи по Y
+  for i := -Round(AxisLength) to Round(AxisLength) do
+    if (i mod step = 0) and (i <> 0) then
+      glPrint3D(0, i, 0, IntToStr(i), BaseFont);
+
+  // Подписи по Z
+  for i := -Round(AxisLength) to Round(AxisLength) do
+    if (i mod step = 0) and (i <> 0) then
+      glPrint3D(0, 0, i, IntToStr(i), BaseFont);
+end;
+
+
+
+procedure glPrint3D(x, y, z: Float32; const text: string; BaseFont: Cardinal);
+begin
+  glPushMatrix;
+  glTranslatef(x, y, z);
+  glRasterPos3f(0, 0, 0);
+
+  glPushAttrib(GL_LIST_BIT);
+  glListBase(BaseFont);
+  glCallLists(Length(text), GL_UNSIGNED_BYTE, PAnsiChar(AnsiString(text)));
+  glPopAttrib;
+
+  glPopMatrix;
+end;
+
 
 end.
 

@@ -6,7 +6,8 @@ uses
   Winapi.Windows,
   System.SysUtils,
   System.Classes,
-  Vcl.Controls;
+  Vcl.Controls,
+  Messages;
 
 type
   TOpenGLControl = class(TCustomControl)
@@ -18,14 +19,26 @@ type
     procedure SetupPixelFormat;
     procedure GLInit;
     procedure GLRelease;
-
+    procedure WMEraseBkgnd(var Message: TWMEraseBkgnd); message WM_ERASEBKGND;
+    procedure CreateParams(var Params: TCreateParams); override;
     procedure CreateHandle; override;
     procedure Paint; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure MakeCurrent;
+    function IsCurrent : Boolean;
   published
     property OnPaint: TNotifyEvent read FOnPaint write FOnPaint;
+    property OnMouseDown;
+    property OnMouseUp;
+    property OnMouseMove;
+    property OnMouseWheel;
+    property OnClick;
+    property OnDblClick;
+    property OnKeyDown;
+    property OnKeyUp;
+    property OnKeyPress;
   end;
 
 implementation
@@ -34,9 +47,24 @@ uses
   OpenGL;
 
 
+procedure TOpenGLControl.WMEraseBkgnd(var Message: TWMEraseBkgnd);
+begin
+  Message.Result := 1;
+end;
+
+procedure TOpenGLControl.CreateParams(var Params: TCreateParams);
+begin
+  inherited CreateParams(Params);
+  Params.WindowClass.style := Params.WindowClass.style and
+    not (CS_HREDRAW or CS_VREDRAW);
+end;
+
+
+
 constructor TOpenGLControl.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  ControlStyle := ControlStyle + [csOpaque];
 end;
 
 destructor TOpenGLControl.Destroy;
@@ -44,6 +72,7 @@ begin
   GLRelease;
   inherited Destroy;
 end;
+
 
 procedure TOpenGLControl.CreateHandle;
 begin
@@ -112,6 +141,17 @@ begin
   wglMakeCurrent(FDC, 0);
   wglDeleteContext(FRC);
   ReleaseDC(Handle, FDC);
+end;
+
+procedure TOpenGLControl.MakeCurrent;
+begin
+  if (FDC <> 0) and (FRC <> 0) then
+    wglMakeCurrent(FDC, FRC);
+end;
+
+function TOpenGLControl.IsCurrent: Boolean;
+begin
+  Result := wglGetCurrentContext = FRC;
 end;
 
 procedure TOpenGLControl.Paint;

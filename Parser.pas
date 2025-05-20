@@ -543,6 +543,15 @@ function TMathExpressionCalc.CalculationBySymbol2D(
     parsed_expression : TQueue<string>;
     elem : string;
     begin
+    if (rstart < -200) then
+      rstart := -200
+    else if (rstart > 200) then
+      rstart := 200;
+    if (rend < -200) then
+      rend := -200
+    else if (rend > 200) then
+      rend := 200;
+
     parsed_expression := TQueue<string>.Create;
     SetLength(points, Abs(rstart - rend)+1);
     if rstart < rend then
@@ -566,7 +575,7 @@ function TMathExpressionCalc.CalculationBySymbol2D(
           variables.AddOrSetValue(range_variable, I+rstart+1);
           if CalculationBySymbol2D(parsed_expression, variables, dependentVar, range_variable, point) then points[I] := point;
       end
-      else raise Exception.Create('0');
+      else raise Exception.Create('Ошибка диапазона');
     Result := True;
     end;
 

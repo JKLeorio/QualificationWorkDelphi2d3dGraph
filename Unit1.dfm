@@ -2,7 +2,7 @@ object Form1: TForm1
   Left = 0
   Top = 0
   Caption = 'Form1'
-  ClientHeight = 751
+  ClientHeight = 754
   ClientWidth = 1149
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -20,6 +20,7 @@ object Form1: TForm1
     Height = 753
     ActivePage = TabSheet1
     TabOrder = 0
+    OnChange = pagecontrolchange
     object TabSheet1: TTabSheet
       Caption = 'TabSheet1'
       object Button2: TButton
@@ -50,7 +51,7 @@ object Form1: TForm1
       end
       object Panel1: TPanel
         Left = 516
-        Top = 17
+        Top = 10
         Width = 593
         Height = 576
         BorderStyle = bsSingle
@@ -119,6 +120,41 @@ object Form1: TForm1
         Caption = #1044#1086#1073#1072#1074#1080#1090#1100' '#1075#1088#1072#1092#1080#1082
         TabOrder = 3
         OnClick = AddEditListBoxItem3d
+      end
+      object Button8: TButton
+        Left = 992
+        Top = 609
+        Width = 98
+        Height = 40
+        Caption = 'Fullscreen'
+        TabOrder = 4
+      end
+      object Button9: TButton
+        Left = 888
+        Top = 616
+        Width = 75
+        Height = 25
+        Caption = 'YZ'
+        TabOrder = 5
+        OnClick = BtnViewYZClick
+      end
+      object Button10: TButton
+        Left = 807
+        Top = 616
+        Width = 75
+        Height = 25
+        Caption = 'XY'
+        TabOrder = 6
+        OnClick = BtnViewXYClick
+      end
+      object Button11: TButton
+        Left = 726
+        Top = 616
+        Width = 75
+        Height = 25
+        Caption = 'XZ'
+        TabOrder = 7
+        OnClick = BtnViewXZClick
       end
     end
   end
