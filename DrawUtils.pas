@@ -131,7 +131,9 @@ var
   scaledLength: Float32;
   axisColorX, axisColorY, axisColorZ: array[0..2] of Float32;
 begin
-  scaledLength := AxisLength * Zoom;
+  scaledLength := AxisLength;
+//  if zoom <= 1 then
+//    scaledLength := AxisLength / Zoom;
 
 
   glLineWidth(2.0);
