@@ -125,7 +125,7 @@ end;
 
 procedure DrawCoordinate3D(BaseFont: Cardinal; Zoom: Float32);
 const
-  AxisLength = 50.0;
+  AxisLength = 100.0;
 var
   i, step: Integer;
   scaledLength: Float32;
@@ -133,41 +133,37 @@ var
 begin
   scaledLength := AxisLength * Zoom;
 
-  // Нарисовать оси
+
   glLineWidth(2.0);
   glBegin(GL_LINES);
-    // X
+
     glColor3f(1, 0, 0);
     glVertex3f(-scaledLength, 0, 0);
     glVertex3f(scaledLength, 0, 0);
-    // Y
+
     glColor3f(0, 1, 0);
     glVertex3f(0, -scaledLength, 0);
     glVertex3f(0, scaledLength, 0);
-    // Z
+
     glColor3f(0, 0, 1);
     glVertex3f(0, 0, -scaledLength);
     glVertex3f(0, 0, scaledLength);
   glEnd;
 
-  // Шаг надписей в зависимости от масштаба
-  if Zoom < 0.2 then step := 10
-  else if Zoom < 0.5 then step := 5
-  else if Zoom < 1 then step := 2
-  else step := 1;
 
-  // Подписи по X
-  glColor3f(0.1, 0.1, 0.1);
+  step := 10;
+
+
+  glColor3f(1, 1, 1);
   for i := -Round(AxisLength) to Round(AxisLength) do
     if (i mod step = 0) and (i <> 0) then
       glPrint3D(i, 0, 0, IntToStr(i), BaseFont);
 
-  // Подписи по Y
+
   for i := -Round(AxisLength) to Round(AxisLength) do
     if (i mod step = 0) and (i <> 0) then
       glPrint3D(0, i, 0, IntToStr(i), BaseFont);
 
-  // Подписи по Z
   for i := -Round(AxisLength) to Round(AxisLength) do
     if (i mod step = 0) and (i <> 0) then
       glPrint3D(0, 0, i, IntToStr(i), BaseFont);

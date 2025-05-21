@@ -79,6 +79,8 @@ var
 const
   MinZoom = 0.02;
   MaxZoom = 5.0;
+  MaxZoomLevel = 2.0;
+  MinZoomLevel = 0.1;
 
 
 procedure CallListBoxArrange;
@@ -90,6 +92,36 @@ uses
 
 {$R *.dfm}
 
+
+procedure InitFont(hdc: HDC);
+var
+  font: HFONT;
+begin
+  BaseFont := glGenLists(256);
+  font := CreateFont(
+    -12, 0, 0, 0, FW_NORMAL, 0, 0, 0,
+    ANSI_CHARSET, OUT_DEFAULT_PRECIS,
+    CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
+    FF_DONTCARE or DEFAULT_PITCH,
+    'Courier New'
+  );
+
+  SelectObject(hdc, font);
+  wglUseFontBitmaps(hdc, 0, 256, BaseFont);
+end;
+
+
+procedure SetZoomlevel(Value: Float32);
+begin
+  if Value < MinZoomLevel then
+    ZoomLevel := MinZoomLevel
+  else if Value > MaxZoomLevel then
+    ZoomLevel := MaxZoomLevel
+  else
+    ZoomLevel := Value;
+
+  FOpenGLControl3d.Invalidate;
+end;
 
 procedure TForm1.BtnViewXYClick(Sender: TObject);
 begin
@@ -181,6 +213,7 @@ var
 begin
   w := FOpenGLControl3D.Width;
   h := FOpenGLControl3D.Height;
+  InitFont(wglGetCurrentDC);
   glViewport(0, 0, w, h);
 
   glMatrixMode(GL_PROJECTION);
@@ -242,6 +275,8 @@ begin
   FOpenGLControl.Invalidate;
 end;
 
+
+
 procedure TForm1.ZoomInBtnClick(Sender: TObject);
 const
   ZoomFactor = 0.9;
@@ -261,22 +296,6 @@ end;
 
 
 
-procedure InitFont(hdc: HDC);
-var
-  font: HFONT;
-begin
-  BaseFont := glGenLists(256);
-  font := CreateFont(
-    -12, 0, 0, 0, FW_NORMAL, 0, 0, 0,
-    ANSI_CHARSET, OUT_DEFAULT_PRECIS,
-    CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
-    FF_DONTCARE or DEFAULT_PITCH,
-    'Courier New'
-  );
-
-  SelectObject(hdc, font);
-  wglUseFontBitmaps(hdc, 0, 256, BaseFont);
-end;
 
 
 procedure TForm1.FormMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
@@ -306,9 +325,9 @@ procedure TForm1.FormMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta:
         if  (pt.X >= 0) and (pt.X < FOpenGLControl3D.Width) and (pt.Y >= 0) and (pt.Y < FOpenGLControl3D.Height) then
         begin
           if WheelDelta > 0 then
-          ZoomLevel := ZoomLevel * 1.1
+          SetZoomlevel(ZoomLevel * 1.1)
           else
-          ZoomLevel := ZoomLevel / 1.1;
+          SetZoomlevel(ZoomLevel / 1.1);
           FOpenGLControl3d.Invalidate;
           Handled := True;
         end;
@@ -528,8 +547,7 @@ begin
   w := FOpenGLControl.Width;
   h := FOpenGLControl.Height;
 
-  if BaseFont = 0 then
-    InitFont(wglGetCurrentDC);
+  InitFont(wglGetCurrentDC);
 
   glViewport(0, 0, w, h);
   glMatrixMode(GL_PROJECTION);
