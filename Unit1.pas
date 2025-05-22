@@ -54,7 +54,7 @@ type
     FirstCameraSetupDone: Boolean;
   public
 
-    items_points : TDictionary<TEditlistBoxitem, TArray<TGraphPoint>>;
+    items_points : TDictionary<TEditlistBoxitem, TArray<TArray<TGraphPoint>>>;
     procedure DrawGraphs;
     procedure OnClickBoxItemCalc(sender : TObject);
 
@@ -70,12 +70,14 @@ var
   MathExpressionCalc : TMathExpressionCalc;
   EditListBox2d : TEditListBox;
   EditlistBox3d : TEditListBox;
-  BaseFont: Cardinal;
+  FontReadyA, FontReadyB: Boolean;
+  BaseFontA, BaseFontB: Cardinal;
   Zoom: Float32 = 1.0;
   ZoomLevel: Single = 1.0;
   RotationX, RotationY: Single;
   LastMouseX, LastMouseY: Integer;
   IsRotating: Boolean = False;
+  FontInitialized: Boolean = False;
 const
   MinZoom = 0.02;
   MaxZoom = 5.0;
@@ -93,11 +95,12 @@ uses
 {$R *.dfm}
 
 
-procedure InitFont(hdc: HDC);
+procedure InitFont(hdc: HDC; out BaseFont: GLuint);
 var
   font: HFONT;
 begin
   BaseFont := glGenLists(256);
+
   font := CreateFont(
     -12, 0, 0, 0, FW_NORMAL, 0, 0, 0,
     ANSI_CHARSET, OUT_DEFAULT_PRECIS,
@@ -108,6 +111,7 @@ begin
 
   SelectObject(hdc, font);
   wglUseFontBitmaps(hdc, 0, 256, BaseFont);
+  DeleteObject(font);
 end;
 
 
@@ -180,8 +184,8 @@ procedure TForm1.DrawGraphs;
   item : TEditListBoxItem;
   items : TObjectList<TEditListBoxItem>;
   editlistbox : TEditListBox;
-  points : TArray<TGraphPoint>;
-  proc : Tproc<TArray<TGraphPoint>>;
+  points : TArray<TArray<TGraphPoint>>;
+  proc : Tproc<TArray<TArray<TGraphPoint>>>;
   begin
     if PageControl1.ActivePage = TabSheet1 then
     begin
@@ -213,7 +217,12 @@ var
 begin
   w := FOpenGLControl3D.Width;
   h := FOpenGLControl3D.Height;
-  InitFont(wglGetCurrentDC);
+
+  if not FontReadyA then
+  begin
+    InitFont(wglGetCurrentDC, BaseFontA);
+    FontReadyA := True;
+  end;
   glViewport(0, 0, w, h);
 
   glMatrixMode(GL_PROJECTION);
@@ -237,7 +246,7 @@ begin
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT);
 
-  DrawCoordinate3d(BaseFont, ZoomLevel);
+  DrawCoordinate3d(BaseFontA, ZoomLevel);
   DrawGraphs;
 
   SwapBuffers(wglGetCurrentDC);
@@ -252,6 +261,11 @@ begin
     FOpenGLControl.MakeCurrent;
     if FOpenGLControl.IsCurrent then
       ShowMessage('2d');
+    if FontReadyA then
+    begin
+      glDeleteLists(BaseFontA, 256);
+      FontReadyA := False;
+    end;
     FOpenGLControl.Repaint;
   end
   else if PageControl1.ActivePage = TabSheet2 then
@@ -259,6 +273,11 @@ begin
     FOpenGLControl3D.MakeCurrent;
     if FOpenGLControl3d.IsCurrent then
       ShowMessage('3d');
+    if FontReadyB then
+    begin
+      glDeleteLists(BaseFontB, 256);
+      FontReadyB := False;
+    end;
     FOpenGLControl3D.Repaint;
   end;
 end;
@@ -346,7 +365,7 @@ begin
 
   MathExpressionCalc := TMathExpressionCalc.Create();
 
-  items_points := TDictionary<TEditlistBoxitem, TArray<TGraphPoint>>.Create;
+  items_points := TDictionary<TEditlistBoxitem, TArray<TArray<TGraphPoint>>>.Create;
 
   FOpenGLControl3d := TOpenGLControl.Create(nil);
   FOpenGLControl3d.Parent := Panel3;
@@ -387,11 +406,9 @@ procedure TForm1.OnClickBoxItemCalc(sender : TObject);
   var
     item : TEditListBoxItem;
     btn : TButton;
-    I, I2, I3, I4, I5 , rstart, rend : Integer;
+    I, I2, I3, I4, I5, I6, rstart, rend : Integer;
     variables : TObjectList<TVariablePair>;
-    points : TArray<TGraphPoint>;
-    points_result : TArray<TGraphPoint>;
-    pointsList : Tlist<TGraphPoint>;
+    pointsList : TList<TArray<TGraphPoint>>;
     math_expression : string;
     variables_dict : TDictionary<string, float64>;
     value : Float64;
@@ -403,13 +420,55 @@ procedure TForm1.OnClickBoxItemCalc(sender : TObject);
     symbol, buff : string;
     is_x, is_y, is_z, edited : Boolean;
     dependentVar : string;
+
+  procedure CalcRanges(ranges : Tlist<TRangePair>; count : Integer; variables_dict : TDictionary<string, float64>);
+  var
+    I4, I5, rstart, rend : Integer;
+    range : TRangePair;
+    points : TArray<TGraphPoint>;
+  begin
+    if count = ranges.Count-1 then
+      begin
+      range := ranges[count];
+        if TryDecimalStrToInt(range.StartEdit.Text, rstart) and TryDecimalStrToInt(range.EndEdit.Text, rend) then
+          begin
+            if rstart > rend then raise Exception.Create('range must be positive');
+            for I4:=0 to Length(parsed_data_copy)-1 do
+            begin
+              parsed_data.Enqueue(parsed_data_copy[I4]);
+            end;
+            if MathExpressionCalc.CalcPointsByRange(rstart, rend, variables_dict, dependentVar, range.NameEdit.Text, points, parsed_data_copy) then
+              begin
+                pointsList.Add(points);
+              end;
+          end
+      end
+    else
+      begin
+        range := ranges[count];
+        if TryDecimalStrToInt(range.StartEdit.Text, rstart) and TryDecimalStrToInt(range.EndEdit.Text, rend) then
+          begin
+            if rstart > rend then raise Exception.Create('range must be positive');
+            for I4:=0 to Length(parsed_data_copy)-1 do
+            begin
+              parsed_data.Enqueue(parsed_data_copy[I4]);
+            end;
+            for I5 := 0 to Abs(rstart) + Abs(rend) do
+            begin
+              variables_dict.AddOrSetValue(ranges[count].NameEdit.Text, I5+rstart);
+              CalcRanges(ranges, count+1, variables_dict)
+            end;
+          end
+      end;
+  end;
+
   begin
     if sender is TButton then
     begin
       btn := TButton(sender);
       if btn.parent is TEditListBoxItem then
       begin
-        pointsList := TList<TGraphPoint>.Create;
+        pointsList := TList<TArray<TGraphPoint>>.Create;
         item := TEditListBoxItem(btn.Parent);
         if not item.IfChangedGetMainEditData(math_expression) and items_points.ContainsKey(item) and (High(items_points.Items[item]) > 0) then
           Exit;
@@ -423,18 +482,19 @@ procedure TForm1.OnClickBoxItemCalc(sender : TObject);
         is_z := True;
         edited := True;
 
+        variables_dict.AddOrSetValue('x', 1);
+        variables_dict.AddOrSetValue('y', 1);
+        variables_dict.AddOrSetValue('z', 1);
+
 
 
         for range in ranges do
         begin
-          variables_dict.AddOrSetValue('x', 1);
-          variables_dict.AddOrSetValue('y', 1);
-          variables_dict.AddOrSetValue('z', 1);
-
           if range.NameEdit.Modified or range.StartEdit.Modified or range.EndEdit.Modified then
             edited := True;
 
           buff := range.NameEdit.Text;
+          variables_dict.AddOrSetValue(buff, 0);
           if dependentVar = buff then
             raise Exception.Create('«ависима€ переменна€ не может быть диапазоном')
           else if buff = 'x' then
@@ -475,26 +535,9 @@ procedure TForm1.OnClickBoxItemCalc(sender : TObject);
               begin
                 parsed_data_copy[I3] := parsed_data.Extract;
               end;
-            end;
-          for range in ranges do
-            begin
-              if TryDecimalStrToInt(range.StartEdit.Text, rstart) and TryDecimalStrToInt(range.EndEdit.Text, rend) then
-              begin
-                if rstart > rend then raise Exception.Create('range must be positive');
-                for I4:=0 to Length(parsed_data_copy)-1 do
-                begin
-                  parsed_data.Enqueue(parsed_data_copy[I4]);
-                end;
-                if MathExpressionCalc.CalcPointsByRange(rstart, rend, variables_dict, dependentVar, range.NameEdit.Text, points, parsed_data_copy) then
-                  begin
-                  for I5 := 0 to High(points)-1 do
-                    pointsList.Add(points[I5]);
-                  Self.items_points.AddOrSetValue(item, pointsList.ToArray);
-                  pointsList.Clear;
-                  end;
-              end
-              else
-                raise Exception.Create('range error');
+                CalcRanges(ranges, 0, variables_dict);
+                Self.items_points.AddOrSetValue(item, pointsList.ToArray);
+                pointsList.Clear;
             end;
         end;
         FOpenGLControl.Repaint;
@@ -547,7 +590,11 @@ begin
   w := FOpenGLControl.Width;
   h := FOpenGLControl.Height;
 
-  InitFont(wglGetCurrentDC);
+  if not FontReadyB then
+  begin
+    InitFont(wglGetCurrentDC, BaseFontB);
+    FontReadyB := True;
+  end;
 
   glViewport(0, 0, w, h);
   glMatrixMode(GL_PROJECTION);
@@ -558,10 +605,11 @@ begin
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity;
 
-  glClear(GL_COLOR_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT);
+
   glColor3f(0, 0, 0);
 
-  DrawCoordinate(BaseFont, Zoom);
+  DrawCoordinate(BaseFontB, Zoom);
   DrawGraphs;
 
   SwapBuffers(wglGetCurrentDC);
@@ -587,8 +635,7 @@ procedure TForm1.CalculateAll(sender : Tobject);
     items : TObjectList<TEditListBoxItem>;
     variables : TObjectList<TVariablePair>;
     points : TArray<TGraphPoint>;
-    points_result : TArray<TGraphPoint>;
-    pointsList : Tlist<TGraphPoint>;
+    pointsList : TList<TArray<TGraphPoint>>;
     math_expression : string;
     variables_dict : TDictionary<string, float64>;
     value : Float64;
@@ -612,7 +659,7 @@ procedure TForm1.CalculateAll(sender : Tobject);
     end;
     variables_dict := TDictionary<string, float64>.Create;
     items := editlistbox.ListBoxItems;
-    pointsList := TList<TGraphPoint>.Create;
+    pointsList := TList<TArray<TGraphPoint>>.Create;
     for I := 0 to items.Count-1 do
     begin
 
@@ -630,14 +677,13 @@ procedure TForm1.CalculateAll(sender : Tobject);
       is_y := True;
       is_z := True;
 
+      variables_dict.AddOrSetValue('x', 1);
+      variables_dict.AddOrSetValue('y', 1);
+      variables_dict.AddOrSetValue('z', 1);
 
 
       for range in ranges do
       begin
-        variables_dict.AddOrSetValue('x', 1);
-        variables_dict.AddOrSetValue('y', 1);
-        variables_dict.AddOrSetValue('z', 1);
-
         if range.NameEdit.Modified or range.StartEdit.Modified or range.EndEdit.Modified then
           edited := True;
 
@@ -692,8 +738,7 @@ procedure TForm1.CalculateAll(sender : Tobject);
                 end;
                 if MathExpressionCalc.CalcPointsByRange(rstart, rend, variables_dict, dependentVar, range.NameEdit.Text, points, parsed_data_copy) then
                   begin
-                  for I5 := 0 to High(points)-1 do
-                    pointsList.Add(points[I5]);
+                  pointsList.Add(points);
                   Self.items_points.AddOrSetValue(items[i], pointsList.ToArray);
                   pointsList.Clear;
                   end;

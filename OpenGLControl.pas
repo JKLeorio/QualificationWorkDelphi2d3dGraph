@@ -15,6 +15,10 @@ type
     FDC: HDC;
     FRC: HGLRC;
     FOnPaint: TNotifyEvent;
+    class var SharedFontCreated: Boolean;
+    class var SharedFontList: Cardinal;
+    class procedure InitSharedFont(DC: HDC);
+    class procedure ReleaseSharedFont;
   protected
     procedure SetupPixelFormat;
     procedure GLInit;
@@ -22,12 +26,14 @@ type
     procedure WMEraseBkgnd(var Message: TWMEraseBkgnd); message WM_ERASEBKGND;
     procedure CreateParams(var Params: TCreateParams); override;
     procedure CreateHandle; override;
+    procedure DestroyHandle; override;
     procedure Paint; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure MakeCurrent;
     function IsCurrent : Boolean;
+    class function GetSharedFont: Cardinal;
   published
     property OnPaint: TNotifyEvent read FOnPaint write FOnPaint;
     property OnMouseDown;
@@ -46,6 +52,7 @@ implementation
 uses
   OpenGL;
 
+{ TOpenGLControl }
 
 procedure TOpenGLControl.WMEraseBkgnd(var Message: TWMEraseBkgnd);
 begin
@@ -59,8 +66,6 @@ begin
     not (CS_HREDRAW or CS_VREDRAW);
 end;
 
-
-
 constructor TOpenGLControl.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -69,15 +74,21 @@ end;
 
 destructor TOpenGLControl.Destroy;
 begin
-  GLRelease;
   inherited Destroy;
 end;
-
 
 procedure TOpenGLControl.CreateHandle;
 begin
   inherited;
   GLInit;
+  if not SharedFontCreated then
+    InitSharedFont(FDC);
+end;
+
+procedure TOpenGLControl.DestroyHandle;
+begin
+  GLRelease;
+  inherited;
 end;
 
 procedure TOpenGLControl.SetupPixelFormat;
@@ -92,32 +103,12 @@ begin
     dwFlags := PFD_DRAW_TO_WINDOW or PFD_SUPPORT_OPENGL or PFD_DOUBLEBUFFER;
     iPixelType := PFD_TYPE_RGBA;
     cColorBits := 32;
-    cRedBits := 0;
-    cRedShift := 0;
-    cGreenBits := 0;
-    cGreenShift := 0;
-    cBlueBits := 0;
-    cBlueShift := 0;
-    cAlphaBits := 0;
-    cAlphaShift := 0;
-    cAccumBits := 0;
-    cAccumRedBits := 0;
-    cAccumGreenBits := 0;
-    cAccumBlueBits := 0;
-    cAccumAlphaBits := 0;
     cDepthBits := 16;
-    cStencilBits := 0;
-    cAuxBuffers := 0;
     iLayerType := PFD_MAIN_PLANE;
-    bReserved := 0;
-    dwLayerMask := 0;
-    dwVisibleMask := 0;
-    dwDamageMask := 0;
   end;
 
   pfIndex := ChoosePixelFormat(FDC, @PixelFormatDescriptor);
   if pfIndex = 0 then Exit;
-
   if not SetPixelFormat(FDC, pfIndex, @PixelFormatDescriptor) then
     raise Exception.Create('Unable to set pixel format.');
 end;
@@ -126,21 +117,27 @@ procedure TOpenGLControl.GLInit;
 begin
   FDC := GetDC(Handle);
   if FDC = 0 then Exit;
-
   SetupPixelFormat;
-
   FRC := wglCreateContext(FDC);
   if FRC = 0 then Exit;
-
   if not wglMakeCurrent(FDC, FRC) then
-    raise Exception.Create('Unable to initialize.');
+    raise Exception.Create('Unable to initialize OpenGL.');
 end;
 
 procedure TOpenGLControl.GLRelease;
 begin
   wglMakeCurrent(FDC, 0);
-  wglDeleteContext(FRC);
-  ReleaseDC(Handle, FDC);
+  if FRC <> 0 then wglDeleteContext(FRC);
+  if FDC <> 0 then ReleaseDC(Handle, FDC);
+  FRC := 0;
+  FDC := 0;
+end;
+
+procedure TOpenGLControl.Paint;
+begin
+  inherited;
+  if Assigned(FOnPaint) then
+    FOnPaint(Self);
 end;
 
 procedure TOpenGLControl.MakeCurrent;
@@ -154,13 +151,33 @@ begin
   Result := wglGetCurrentContext = FRC;
 end;
 
-procedure TOpenGLControl.Paint;
+class function TOpenGLControl.GetSharedFont: Cardinal;
 begin
-  inherited;
-  if Assigned(FOnPaint) then
+  Result := SharedFontList;
+end;
+
+class procedure TOpenGLControl.InitSharedFont(DC: HDC);
+var
+  font: HFONT;
+begin
+  SharedFontList := glGenLists(256);
+  font := CreateFont(-12, 0, 0, 0, FW_NORMAL, 0, 0, 0,
+    ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
+    FF_DONTCARE or DEFAULT_PITCH, 'Courier New');
+
+  SelectObject(DC, font);
+  wglUseFontBitmaps(DC, 0, 256, SharedFontList);
+  SharedFontCreated := True;
+end;
+
+class procedure TOpenGLControl.ReleaseSharedFont;
+begin
+  if SharedFontCreated then
   begin
-    FOnPaint(Self);
+    glDeleteLists(SharedFontList, 256);
+    SharedFontCreated := False;
   end;
 end;
 
 end.
+

@@ -161,6 +161,7 @@ function OccurrencesOfChar(const S: string; const C: char): integer;
     multiplication : TOperator;
     division : TOperator;
     cpower : TOperator;
+    cpower2 : TOperator;
 
   begin
     inherited Create;
@@ -192,6 +193,11 @@ function OccurrencesOfChar(const S: string; const C: char): integer;
       func := function(a, b: Float64): Float64 begin Result := Power(a, b) end;
       priority := 3;
     end;
+    with cpower2 do
+    begin
+      func := function(a, b: Float64): Float64 begin Result := Power(a, b) end;
+      priority := 3;
+    end;
 
     OPERATORS := TDictionary<string, TOperator>.Create;
     OPERATORS.Add('+', addition);
@@ -199,6 +205,7 @@ function OccurrencesOfChar(const S: string; const C: char): integer;
     OPERATORS.Add('*', multiplication);
     OPERATORS.Add('/', division);
     OPERATORS.Add('**', cpower);
+    OPERATORS.Add('^', cpower);
 
     UNARY_OPERATORS := TDictionary<string, TUnaryFunc>.Create;
     UNARY_OPERATORS.Add('sin', function(x: Float64): Float64 begin Result := Sin(x); end);
@@ -543,14 +550,14 @@ function TMathExpressionCalc.CalculationBySymbol2D(
     parsed_expression : TQueue<string>;
     elem : string;
     begin
-    if (rstart < -200) then
-      rstart := -200
-    else if (rstart > 200) then
-      rstart := 200;
-    if (rend < -200) then
-      rend := -200
-    else if (rend > 200) then
-      rend := 200;
+    if (rstart < -1000) then
+      rstart := -1000
+    else if (rstart > 1000) then
+      rstart := 1000;
+    if (rend < -1000) then
+      rend := -1000
+    else if (rend > 1000) then
+      rend := 1000;
 
     parsed_expression := TQueue<string>.Create;
     SetLength(points, Abs(rstart - rend)+1);

@@ -8,7 +8,7 @@ procedure DrawOs(alfa: Float32; zoom: Float32);
 
 procedure DrawCoordinate(basefont: Cardinal; zoom: Float32);
 
-procedure DrawGraph(points: TArray<TGraphPoint>);
+procedure DrawGraph(points: TArray<TArray<TGraphPoint>>);
 
 procedure SetGLColor(Color: TColor);
 
@@ -16,7 +16,7 @@ procedure glPrint(x, y: Float32; text: string; basefont: Cardinal);
 
 procedure DrawCoordinate3D(BaseFont: Cardinal; Zoom: Float32);
 
-procedure DrawGraph3d(points: TArray<TGraphPoint>);
+procedure DrawGraph3d(points: TArray<TArray<TGraphPoint>>);
 
 procedure glPrint3D(x, y, z: Float32; const text: string; BaseFont: Cardinal);
 
@@ -45,28 +45,38 @@ begin
 end;
 
 
-procedure DrawGraph(points: TArray<TGraphPoint>);
+procedure DrawGraph(points: TArray<TArray<TGraphPoint>>);
 var
-  I: Integer;
+  I, I2: Integer;
 begin
   if Length(points) < 1 then raise Exception.Create('3');
   glLineWidth(2);
-  glBegin(GL_LINE_STRIP);
   for I := 0 to High(points) do
-    glVertex2f(points[i].x, points[i].y);
-  glEnd;
+  begin
+  glBegin(GL_LINE_STRIP);
+
+    for I2 := 0 to High(points[I]) do
+      glVertex2f(points[i][i2].x, points[i][i2].y);
+
+    glEnd;
+  end;
 end;
 
-procedure DrawGraph3d(points: TArray<TGraphPoint>);
+procedure DrawGraph3d(points: TArray<TArray<TGraphPoint>>);
 var
-  I: Integer;
+  I, I2: Integer;
 begin
   if Length(points) < 1 then raise Exception.Create('3');
   glLineWidth(2);
-  glBegin(GL_LINE_STRIP);
   for I := 0 to High(points) do
-    glVertex3f(points[i].x, points[i].y, points[i].z);
-  glEnd;
+  begin
+    glBegin(GL_LINE_STRIP);
+
+    for I2 := 0 to High(points[I]) do
+      glVertex3f(points[i][i2].x, points[i][i2].y, points[i][i2].z);
+
+    glEnd;
+  end;
 end;
 
 
@@ -123,18 +133,25 @@ begin
 end;
 
 
+procedure DrawArrow(const BaseFont: Cardinal);
+const
+  ArrowSize = 3.0;
+begin
+  glBegin(GL_TRIANGLES);
+    glVertex3f(0, 0, 0);
+    glVertex3f(-ArrowSize, ArrowSize/2, 0);
+    glVertex3f(-ArrowSize, -ArrowSize/2, 0);
+  glEnd;
+end;
+
 procedure DrawCoordinate3D(BaseFont: Cardinal; Zoom: Float32);
 const
   AxisLength = 100.0;
 var
   i, step: Integer;
   scaledLength: Float32;
-  axisColorX, axisColorY, axisColorZ: array[0..2] of Float32;
 begin
   scaledLength := AxisLength;
-//  if zoom <= 1 then
-//    scaledLength := AxisLength / Zoom;
-
 
   glLineWidth(2.0);
   glBegin(GL_LINES);
@@ -153,14 +170,32 @@ begin
   glEnd;
 
 
+  glColor3f(1, 0, 0);
+  glPushMatrix;
+    glTranslatef(scaledLength, 0, 0);
+    glRotatef(90, 0, 1, 0);
+    DrawArrow(BaseFont);
+  glPopMatrix;
+
+  glColor3f(0, 1, 0);
+  glPushMatrix;
+    glTranslatef(0, scaledLength, 0);
+    glRotatef(-90, 1, 0, 0);
+    DrawArrow(BaseFont);
+  glPopMatrix;
+
+  glColor3f(0, 0, 1);
+  glPushMatrix;
+    glTranslatef(0, 0, scaledLength);
+    DrawArrow(BaseFont);
+  glPopMatrix;
+
   step := 10;
-
-
   glColor3f(1, 1, 1);
+
   for i := -Round(AxisLength) to Round(AxisLength) do
     if (i mod step = 0) and (i <> 0) then
       glPrint3D(i, 0, 0, IntToStr(i), BaseFont);
-
 
   for i := -Round(AxisLength) to Round(AxisLength) do
     if (i mod step = 0) and (i <> 0) then
@@ -169,8 +204,16 @@ begin
   for i := -Round(AxisLength) to Round(AxisLength) do
     if (i mod step = 0) and (i <> 0) then
       glPrint3D(0, 0, i, IntToStr(i), BaseFont);
-end;
 
+  glColor3f(1, 0, 0);
+  glPrint3D(scaledLength + 5, 0, 0, 'X', BaseFont);
+
+  glColor3f(0, 1, 0);
+  glPrint3D(0, scaledLength + 5, 0, 'Y', BaseFont);
+
+  glColor3f(0, 0, 1);
+  glPrint3D(0, 0, scaledLength + 5, 'Z', BaseFont);
+end;
 
 
 procedure glPrint3D(x, y, z: Float32; const text: string; BaseFont: Cardinal);
