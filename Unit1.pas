@@ -535,9 +535,9 @@ procedure TForm1.OnClickBoxItemCalc(sender : TObject);
               begin
                 parsed_data_copy[I3] := parsed_data.Extract;
               end;
-                CalcRanges(ranges, 0, variables_dict);
-                Self.items_points.AddOrSetValue(item, pointsList.ToArray);
-                pointsList.Clear;
+              CalcRanges(ranges, 0, variables_dict);
+              Self.items_points.AddOrSetValue(item, pointsList.ToArray);
+              pointsList.Clear;
             end;
         end;
         FOpenGLControl.Repaint;
@@ -640,14 +640,57 @@ procedure TForm1.CalculateAll(sender : Tobject);
     variables_dict : TDictionary<string, float64>;
     value : Float64;
     ranges : Tlist<TRangePair>;
-    range : TRangePair;
     parsed_data : TQueue<string>;
     parsed_data_copy : array of string;
     elem : string;
+    range : TRangePair;
     symbol, buff : string;
     is_x, is_y, is_z, edited : Boolean;
     dependentVar : string;
     editlistbox : TEditListBox;
+
+  procedure CalcRanges(ranges : Tlist<TRangePair>; count : Integer; variables_dict : TDictionary<string, float64>);
+  var
+    I4, I5, rstart, rend : Integer;
+    range : TRangePair;
+    points : TArray<TGraphPoint>;
+  begin
+    if count = ranges.Count-1 then
+      begin
+      range := ranges[count];
+        if TryDecimalStrToInt(range.StartEdit.Text, rstart) and TryDecimalStrToInt(range.EndEdit.Text, rend) then
+          begin
+            if rstart > rend then raise Exception.Create('range must be positive');
+            for I4:=0 to Length(parsed_data_copy)-1 do
+            begin
+              parsed_data.Enqueue(parsed_data_copy[I4]);
+            end;
+            if MathExpressionCalc.CalcPointsByRange(rstart, rend, variables_dict, dependentVar, range.NameEdit.Text, points, parsed_data_copy) then
+              begin
+                pointsList.Add(points);
+              end;
+          end
+      end
+    else
+      begin
+        range := ranges[count];
+        if TryDecimalStrToInt(range.StartEdit.Text, rstart) and TryDecimalStrToInt(range.EndEdit.Text, rend) then
+          begin
+            if rstart > rend then raise Exception.Create('range must be positive');
+            for I4:=0 to Length(parsed_data_copy)-1 do
+            begin
+              parsed_data.Enqueue(parsed_data_copy[I4]);
+            end;
+            for I5 := 0 to Abs(rstart) + Abs(rend) do
+            begin
+              variables_dict.AddOrSetValue(ranges[count].NameEdit.Text, I5+rstart);
+              CalcRanges(ranges, count+1, variables_dict)
+            end;
+          end
+      end;
+  end;
+
+
   begin
     if PageControl1.ActivePage = TabSheet1 then
     begin
@@ -680,6 +723,8 @@ procedure TForm1.CalculateAll(sender : Tobject);
       variables_dict.AddOrSetValue('x', 1);
       variables_dict.AddOrSetValue('y', 1);
       variables_dict.AddOrSetValue('z', 1);
+
+      edited := True;
 
 
       for range in ranges do
@@ -726,29 +771,13 @@ procedure TForm1.CalculateAll(sender : Tobject);
               begin
                 parsed_data_copy[I3] := parsed_data.Extract;
               end;
-            end;
-          for range in ranges do
-            begin
-              if TryDecimalStrToInt(range.StartEdit.Text, rstart) and TryDecimalStrToInt(range.EndEdit.Text, rend) then
-              begin
-                if rstart > rend then raise Exception.Create('range must be positive');
-                for I4:=0 to Length(parsed_data_copy)-1 do
-                begin
-                  parsed_data.Enqueue(parsed_data_copy[I4]);
-                end;
-                if MathExpressionCalc.CalcPointsByRange(rstart, rend, variables_dict, dependentVar, range.NameEdit.Text, points, parsed_data_copy) then
-                  begin
-                  pointsList.Add(points);
-                  Self.items_points.AddOrSetValue(items[i], pointsList.ToArray);
-                  pointsList.Clear;
-                  end;
-              end
-              else
-                raise Exception.Create('range error');
+              CalcRanges(ranges, 0, variables_dict);
+              Self.items_points.AddOrSetValue(items[i], pointsList.ToArray);
+              pointsList.Clear;
             end;
         end;
-        FOpenGLControl.Repaint;
     end;
+        FOpenGLControl.Repaint;
   end;
 
 procedure CallListBoxArrange;
