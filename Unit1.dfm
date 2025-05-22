@@ -44,7 +44,7 @@ object Form1: TForm1
       object Panel2: TPanel
         Left = 96
         Top = 17
-        Width = 337
+        Width = 361
         Height = 512
         BorderStyle = bsSingle
         TabOrder = 2
@@ -106,7 +106,7 @@ object Form1: TForm1
       object Panel4: TPanel
         Left = 96
         Top = 21
-        Width = 329
+        Width = 369
         Height = 522
         BorderStyle = bsSingle
         ParentBackground = False

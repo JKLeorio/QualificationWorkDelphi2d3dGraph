@@ -49,7 +49,7 @@ procedure DrawGraph(points: TArray<TArray<TGraphPoint>>);
 var
   I, I2: Integer;
 begin
-  if Length(points) < 1 then raise Exception.Create('3');
+  if Length(points) < 1 then raise Exception.Create('no points');
   glLineWidth(2);
   for I := 0 to High(points) do
   begin
@@ -66,7 +66,7 @@ procedure DrawGraph3d(points: TArray<TArray<TGraphPoint>>);
 var
   I, I2: Integer;
 begin
-  if Length(points) < 1 then raise Exception.Create('3');
+  if Length(points) < 1 then raise Exception.Create('no points');
   glLineWidth(2);
   for I := 0 to High(points) do
   begin

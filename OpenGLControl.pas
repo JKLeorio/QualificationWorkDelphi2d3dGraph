@@ -52,7 +52,6 @@ implementation
 uses
   OpenGL;
 
-{ TOpenGLControl }
 
 procedure TOpenGLControl.WMEraseBkgnd(var Message: TWMEraseBkgnd);
 begin
