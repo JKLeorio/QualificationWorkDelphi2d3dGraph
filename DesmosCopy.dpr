@@ -9,7 +9,8 @@ uses
   MathUtils in 'MathUtils.pas',
   DrawUtils in 'DrawUtils.pas',
   EditListBox in 'EditListBox.pas',
-  EditListBoxItem in 'EditListBoxItem.pas';
+  EditListBoxItem in 'EditListBoxItem.pas',
+  ProgressForm in 'ProgressForm.pas' {Form2};
 
 {$R *.res}
 
@@ -18,5 +19,6 @@ begin
   Application.MainFormOnTaskbar := True;
   Application.CreateForm(TForm1, Form1);
   Application.CreateForm(TGLFSWindowForm, GLFSWindowForm);
+  Application.CreateForm(TForm2, Form2);
   Application.Run;
 end.

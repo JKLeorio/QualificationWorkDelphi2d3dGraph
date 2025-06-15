@@ -5,7 +5,8 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, OpenGLControl, GLFSWindow, Parser,
-  Generics.Collections, StrUtils, DrawUtils, EditListBox, Vcl.ComCtrls, EditListBoxItem;
+  Generics.Collections, StrUtils, DrawUtils, EditListBox, Vcl.ComCtrls, EditListBoxItem, ProgressForm,
+  Vcl.Menus;
 
 
 
@@ -29,6 +30,18 @@ type
     Button9: TButton;
     Button10: TButton;
     Button11: TButton;
+    Panel5: TPanel;
+    Panel6: TPanel;
+    Panel7: TPanel;
+    Panel8: TPanel;
+    Panel10: TPanel;
+    Panel9: TPanel;
+    MainMenu1: TMainMenu;
+    N1: TMenuItem;
+    N2: TMenuItem;
+    N3: TMenuItem;
+    N4: TMenuItem;
+    N5: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure OpenGLControlPaint(Sender : TObject);
@@ -48,12 +61,15 @@ type
     procedure BtnViewXYClick(Sender: TObject);
     procedure BtnViewXZClick(Sender: TObject);
     procedure BtnViewYZClick(Sender: TObject);
+    procedure AboutMenuItemClick(Sender: TObject);
+    procedure HelpMenuItemClick(Sender: TObject);
+    procedure LoadMenuItemClick(Sender: TObject);
+    procedure SaveMenuItemClick(Sender: TObject);
 
   private
     ChildWindow : TForm;
     FirstCameraSetupDone: Boolean;
   public
-
     items_points : TDictionary<TEditlistBoxitem, TArray<TArray<TGraphPoint>>>;
     procedure DrawGraphs;
     procedure OnClickBoxItemCalc(sender : TObject);
@@ -78,11 +94,15 @@ var
   LastMouseX, LastMouseY: Integer;
   IsRotating: Boolean = False;
   FontInitialized: Boolean = False;
+  form_page_factor, page_opengl_control : float32;
+  Caption : string;
+  FProgressForm : Tform2;
 const
   MinZoom = 0.02;
   MaxZoom = 5.0;
-  MaxZoomLevel = 2.0;
-  MinZoomLevel = 0.1;
+  MaxZoomLevel = 4.0;
+  MinZoomLevel = 0.35;
+
 
 
 procedure CallListBoxArrange;
@@ -93,6 +113,28 @@ uses
   OpenGL, MathUtils;
 
 {$R *.dfm}
+
+
+procedure TForm1.SaveMenuItemClick(Sender: TObject);
+begin
+  ShowMessage('Сохранение...');
+end;
+
+procedure TForm1.LoadMenuItemClick(Sender: TObject);
+begin
+  ShowMessage('Загрузка...');
+end;
+
+procedure TForm1.HelpMenuItemClick(Sender: TObject);
+begin
+  ShowMessage('Это раздел справки...');
+end;
+
+procedure TForm1.AboutMenuItemClick(Sender: TObject);
+begin
+  ShowMessage('Приложение: Графический калькулятор 2D/3D — Автор: Козубаев Жуманазар');
+end;
+
 
 
 procedure InitFont(hdc: HDC; out BaseFont: GLuint);
@@ -252,6 +294,14 @@ begin
   SwapBuffers(wglGetCurrentDC);
 end;
 
+
+procedure TForm1.FormResize(Sender: TObject);
+begin
+  if PageControl1.ActivePage = TabSheet1 then
+  begin
+
+  end;
+end;
 
 
 procedure TForm1.pagecontrolchange(sender: TObject);
@@ -524,7 +574,6 @@ procedure TForm1.OnClickBoxItemCalc(sender : TObject);
         if not edited then Exit;
 
         math_expression := SolveExpressionSymPy(math_expression, dependentVar);
-        ShowMessage(math_expression);
 
         if MathExpressionCalc.Parse(math_expression, parsed_data, variables_dict) then
         begin
@@ -565,22 +614,13 @@ procedure TForm1.OnClickBoxItemHide(sender : TObject);
 
 
 
+
 procedure TForm1.FormDestroy(Sender: TObject);
 begin
   FOpenGLControl.Free;
   FOpenGLControl3D.Free;
 end;
 
-procedure TForm1.FormResize(Sender: TObject);
-var
-  Aspect: Single;
-begin
-  glViewPort(0, 0, FOpenGLControl.Width, FOpenGLControl.Height);
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  Aspect := Real(FOpenGLControl.Width) / Real(FOpenGLControl.Height);
-  glOrtho(-Aspect, Aspect, -1.0, 1.0, -1.0, 1.0);
-end;
 
 
 procedure TForm1.OpenGLControlPaint(Sender: TObject);
@@ -703,81 +743,84 @@ procedure TForm1.CalculateAll(sender : Tobject);
     variables_dict := TDictionary<string, float64>.Create;
     items := editlistbox.ListBoxItems;
     pointsList := TList<TArray<TGraphPoint>>.Create;
-    for I := 0 to items.Count-1 do
-    begin
-
-      if not items[i].IfChangedGetMainEditData(math_expression) then
-        Continue;
-
-      pointsList.Clear;
-      items[i].GetVariables(variables);
-      items[i].GetRanges(ranges);
-      if Assigned(variables_dict) then variables_dict.Free;
-      variables_dict := TDictionary<string, float64>.Create;
-      dependentVar := items[i].DependentVarEdit.Text;
-
-      is_x := True;
-      is_y := True;
-      is_z := True;
-
-      variables_dict.AddOrSetValue('x', 1);
-      variables_dict.AddOrSetValue('y', 1);
-      variables_dict.AddOrSetValue('z', 1);
-
-      edited := True;
-
-
-      for range in ranges do
+    FProgressForm := TForm2.Create(self);
+      for I := 0 to items.Count-1 do
       begin
-        if range.NameEdit.Modified or range.StartEdit.Modified or range.EndEdit.Modified then
-          edited := True;
+        if not items[i].IfChangedGetMainEditData(math_expression) then
+          Continue;
 
-        buff := range.NameEdit.Text;
-        if dependentVar = buff then
-          raise Exception.Create('Зависимая переменная не может быть диапазоном')
-        else if buff = 'x' then
-          is_x := False
-        else if buff = 'y' then
-          is_x := False
-        else if buff = 'z' then
-          is_z := False;
-      end;
+        pointsList.Clear;
+        items[i].GetVariables(variables);
+        items[i].GetRanges(ranges);
+        if Assigned(variables_dict) then variables_dict.Free;
+        variables_dict := TDictionary<string, float64>.Create;
+        dependentVar := items[i].DependentVarEdit.Text;
 
-      if is_x and is_y and is_z then
-        raise Exception.Create('Требуется диапазон');
+        is_x := True;
+        is_y := True;
+        is_z := True;
 
-      if not is_x and not is_y and not is_z then
-        raise Exception.Create('Зависимая переменная не может быть диапазоном');
+        variables_dict.AddOrSetValue('x', 1);
+        variables_dict.AddOrSetValue('y', 1);
+        variables_dict.AddOrSetValue('z', 1);
+
+        edited := True;
 
 
-        for I2 := 0 to variables.Count-1 do
-            begin
-              if variables[i2].NameEdit.Modified or variables[i].ValueEdit.Modified and TryStrToFloat(variables[I2].ValueEdit.Text, value) then
-              begin
-                variables_dict.AddOrSetValue(variables[I2].NameEdit.Text, value);
-                edited := True;
-              end;
-            end;
-
-      if not edited then Continue;
-
-      math_expression := SolveExpressionSymPy(math_expression, dependentVar);
-      if MathExpressionCalc.Parse(math_expression, parsed_data, variables_dict) then
+        for range in ranges do
         begin
-        if parsed_data.Count <> 0 then
-            begin
-              SetLength(parsed_data_copy, parsed_data.Count);
-              for I3 := 0 to parsed_data.Count-1 do
-              begin
-                parsed_data_copy[I3] := parsed_data.Extract;
-              end;
-              CalcRanges(ranges, 0, variables_dict);
-              Self.items_points.AddOrSetValue(items[i], pointsList.ToArray);
-              pointsList.Clear;
-            end;
+          if range.NameEdit.Modified or range.StartEdit.Modified or range.EndEdit.Modified then
+            edited := True;
+
+          buff := range.NameEdit.Text;
+          if dependentVar = buff then
+            raise Exception.Create('Зависимая переменная не может быть диапазоном')
+          else if buff = 'x' then
+            is_x := False
+          else if buff = 'y' then
+            is_x := False
+          else if buff = 'z' then
+            is_z := False;
         end;
-    end;
-        FOpenGLControl.Repaint;
+
+        if is_x and is_y and is_z then
+          raise Exception.Create('Требуется диапазон');
+
+        if not is_x and not is_y and not is_z then
+          raise Exception.Create('Зависимая переменная не может быть диапазоном');
+
+
+          for I2 := 0 to variables.Count-1 do
+              begin
+                if variables[i2].NameEdit.Modified or variables[i].ValueEdit.Modified and TryStrToFloat(variables[I2].ValueEdit.Text, value) then
+                begin
+                  variables_dict.AddOrSetValue(variables[I2].NameEdit.Text, value);
+                  edited := True;
+                end;
+              end;
+
+        if not edited then Continue;
+
+        math_expression := SolveExpressionSymPy(math_expression, dependentVar);
+        if MathExpressionCalc.Parse(math_expression, parsed_data, variables_dict) then
+          begin
+          if parsed_data.Count <> 0 then
+              begin
+                SetLength(parsed_data_copy, parsed_data.Count);
+                for I3 := 0 to parsed_data.Count-1 do
+                begin
+                  parsed_data_copy[I3] := parsed_data.Extract;
+                end;
+                CalcRanges(ranges, 0, variables_dict);
+                Self.items_points.AddOrSetValue(items[i], pointsList.ToArray);
+                pointsList.Clear;
+              end;
+          end;
+      end;
+      if FOpenGLControl.IsCurrent then
+        FOpenGLControl.Repaint
+      else
+          FOpenGLControl3d.Repaint
   end;
 
 procedure CallListBoxArrange;

@@ -45,6 +45,7 @@ begin
 end;
 
 
+
 procedure DrawGraph(points: TArray<TArray<TGraphPoint>>);
 var
   I, I2: Integer;
@@ -62,6 +63,8 @@ begin
   end;
 end;
 
+
+
 procedure DrawGraph3d(points: TArray<TArray<TGraphPoint>>);
 var
   I, I2: Integer;
@@ -78,6 +81,8 @@ begin
     glEnd;
   end;
 end;
+
+
 
 
 procedure SetGLColor(Color: TColor);
@@ -146,7 +151,7 @@ end;
 
 procedure DrawCoordinate3D(BaseFont: Cardinal; Zoom: Float32);
 const
-  AxisLength = 100.0;
+  AxisLength = 150.0;
 var
   i, step: Integer;
   scaledLength: Float32;

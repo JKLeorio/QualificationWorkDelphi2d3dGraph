@@ -354,7 +354,6 @@ function OccurrencesOfChar(const S: string; const C: char): integer;
   resultExpression := TQueue<string>.Create;
   math_expression := StringReplace(math_expression, ' ', '', [rfReplaceAll]);
   math_expression := GetRightSideOfAssignment(math_expression);
-  ShowMessage(math_expression);
   while i <= Length(math_expression) do
     begin
       character := math_expression[i];
