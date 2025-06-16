@@ -52,7 +52,6 @@ type
     procedure OnClickBoxItemHide(sender : TObject);
     procedure ZoomInBtnClick(Sender: TObject);
     procedure ZoomOutBtnClick(Sender: TObject);
-    procedure FormMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
     procedure pagecontrolchange(Sender: TObject);
     procedure OpenGLControlPaint3d(Sender : TObject);
     procedure Panel3dMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -65,6 +64,8 @@ type
     procedure HelpMenuItemClick(Sender: TObject);
     procedure LoadMenuItemClick(Sender: TObject);
     procedure SaveMenuItemClick(Sender: TObject);
+    procedure FullScreen(Sender: Tobject);
+    procedure FormMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
 
   private
     ChildWindow : TForm;
@@ -73,6 +74,7 @@ type
     items_points : TDictionary<TEditlistBoxitem, TArray<TArray<TGraphPoint>>>;
     procedure DrawGraphs;
     procedure OnClickBoxItemCalc(sender : TObject);
+    procedure HandleMouseWheelZoom(WheelDelta: Integer; MousePos: TPoint);
 
   end;
 
@@ -275,6 +277,118 @@ begin
 end;
 
 
+procedure TForm1.FormMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+begin
+  HandleMouseWheelZoom(WheelDelta, MousePos);
+  Handled := True;
+end;
+
+procedure TForm1.Fullscreen(Sender: TObject);
+var
+  OwnerPanel1, OwnerPanel2: TWinControl;
+  OwnerAlign1, OwnerAlign2: TAlign;
+  ScreenWidth, ScreenHeight: Integer;
+  NewWidth, NewHeight: Integer;
+begin
+  GLFSWindowForm := TGLFSWindowForm.Create(nil);
+  try
+    ScreenWidth := Screen.Width;
+    ScreenHeight := Screen.Height;
+
+    NewWidth := Round(ScreenWidth * 0.9);
+    NewHeight := Round(ScreenHeight * 0.9);
+
+    GLFSWindowForm.BorderStyle := bsSizeable;
+    GLFSWindowForm.Position := poDesigned;
+    GLFSWindowForm.SetBounds(
+      (ScreenWidth - NewWidth) div 2,
+      (ScreenHeight - NewHeight) div 2,
+      NewWidth,
+      NewHeight
+    );
+
+
+    if FontReadyA then
+    begin
+      glDeleteLists(BaseFontA, 256);
+      FontReadyA := False;
+    end;
+
+    if FOpenGLControl.IsCurrent and (PageControl1.ActivePage = TabSheet1) then
+    begin
+      OwnerPanel1 := FOpenGLControl.Parent;
+      OwnerAlign1 := FOpenGLControl.Align;
+      FOpenGLControl.MakeCurrent;
+      if FontReadyA then
+      begin
+        glDeleteLists(BaseFontA, 256);
+        FontReadyA := False;
+      end;
+      FOpenGLControl.Parent := GLFSWindowForm.Panel1;
+      FOpenGLControl.Align := alClient;
+      InitFont(wglGetCurrentDC, BaseFontA);
+      FontReadyA := True;
+    end;
+
+    if FontReadyB then
+    begin
+      glDeleteLists(BaseFontB, 256);
+      FontReadyB := False;
+    end;
+
+    if FOpenGLControl3D.IsCurrent and (PageControl1.ActivePage = TabSheet2) then
+    begin
+      OwnerPanel2 := FOpenGLControl3D.Parent;
+      OwnerAlign2 := FOpenGLControl3D.Align;
+      FOpenGLControl3D.MakeCurrent;
+      if FontReadyB then
+      begin
+        glDeleteLists(BaseFontB, 256);
+        FontReadyB := False;
+      end;
+      FOpenGLControl3D.Parent := GLFSWindowForm.Panel1;
+      FOpenGLControl3D.Align := alClient;
+      InitFont(wglGetCurrentDC, BaseFontB);
+      FontReadyB := True;
+    end;
+
+
+
+    GLFSWindowForm.ShowModal;
+
+  finally
+
+    if FontReadyA then
+    begin
+      glDeleteLists(BaseFontA, 256);
+      FontReadyA := False;
+    end;
+
+    if FOpenGLControl.IsCurrent then
+    begin
+      FOpenGLControl.Parent := OwnerPanel1;
+      FOpenGLControl.Align := OwnerAlign1;
+    end;
+
+    if FOpenGLControl3D.IsCurrent then
+    begin
+      FOpenGLControl3D.Parent := OwnerPanel2;
+      FOpenGLControl3D.Align := OwnerAlign2;
+    end;
+
+    if FontReadyB then
+    begin
+      glDeleteLists(BaseFontB, 256);
+      FontReadyB := False;
+    end;
+
+    GLFSWindowForm.Free;
+    FOpenGLControl.Repaint;
+    FOpenGLControl3D.Repaint;
+  end;
+end;
+
+
 procedure TForm1.DrawGraphs;
   var
   I : Integer;
@@ -320,6 +434,8 @@ begin
     InitFont(wglGetCurrentDC, BaseFontA);
     FontReadyA := True;
   end;
+
+
   glViewport(0, 0, w, h);
 
   glMatrixMode(GL_PROJECTION);
@@ -364,28 +480,37 @@ begin
   if PageControl1.ActivePage = TabSheet1 then
   begin
     FOpenGLControl.MakeCurrent;
-    if FOpenGLControl.IsCurrent then
-      ShowMessage('2d');
-    if FontReadyA then
+    if FontReadyB then
     begin
-      glDeleteLists(BaseFontA, 256);
-      FontReadyA := False;
+      FOpenGLControl3D.MakeCurrent;
+      glDeleteLists(BaseFontB, 256);
+      FontReadyB := False;
     end;
+
+    FOpenGLControl.MakeCurrent;
+    if not FontReadyA then
+      InitFont(wglGetCurrentDC, BaseFontA);
+    FontReadyA := True;
     FOpenGLControl.Repaint;
   end
   else if PageControl1.ActivePage = TabSheet2 then
   begin
     FOpenGLControl3D.MakeCurrent;
-    if FOpenGLControl3d.IsCurrent then
-      ShowMessage('3d');
-    if FontReadyB then
+    if FontReadyA then
     begin
-      glDeleteLists(BaseFontB, 256);
-      FontReadyB := False;
+      FOpenGLControl.MakeCurrent;
+      glDeleteLists(BaseFontA, 256);
+      FontReadyA := False;
     end;
+
+    FOpenGLControl3D.MakeCurrent;
+    if not FontReadyB then
+      InitFont(wglGetCurrentDC, BaseFontB);
+    FontReadyB := True;
     FOpenGLControl3D.Repaint;
   end;
 end;
+
 
 procedure SetZoom(Value: Float32);
 begin
@@ -418,46 +543,49 @@ begin
 end;
 
 
+procedure TForm1.HandleMouseWheelZoom(WheelDelta: Integer; MousePos: TPoint);
+const
+  ZoomFactor = 1.1;
+var
+  pt: TPoint;
+  TargetControl: TOpenGLControl;
+begin
+  TargetControl := nil;
 
-
-
-
-procedure TForm1.FormMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
-  var
-    pt: TPoint;
-  const
-    ZoomFactor = 1.1;
+  if Assigned(GLFSWindowForm) and GLFSWindowForm.Visible then
   begin
-  if PageControl1.ActivePage = TabSheet1 then
-    begin
-      pt := FOpenGLControl.ScreenToClient(MousePos);
+    TargetControl := GLFSWindowForm.GetOpenGLControl;
+  end
+  else
+  begin
 
-    if (pt.X >= 0) and (pt.X < FOpenGLControl.Width) and (pt.Y >= 0) and (pt.Y < FOpenGLControl.Height) then
-       begin
-
-        if WheelDelta > 0 then
-          SetZoom(Zoom * ZoomFactor)
-        else
-          SetZoom(Zoom / ZoomFactor);
-        FOpenGLControl.Invalidate;
-        Handled := True;
-      end
-    end
-    else if PageControl1.ActivePage = TabSheet2 then
-      begin
-        pt := FOpenGLControl3D.ScreenToClient(MousePos);
-        if  (pt.X >= 0) and (pt.X < FOpenGLControl3D.Width) and (pt.Y >= 0) and (pt.Y < FOpenGLControl3D.Height) then
-        begin
-          if WheelDelta > 0 then
-          SetZoomlevel(ZoomLevel * 1.1)
-          else
-          SetZoomlevel(ZoomLevel / 1.1);
-          FOpenGLControl3d.Invalidate;
-          Handled := True;
-        end;
-      end;
-
+    if (PageControl1.ActivePage = TabSheet1) then
+      TargetControl := FOpenGLControl
+    else if (PageControl1.ActivePage = TabSheet2) then
+      TargetControl := FOpenGLControl3D;
   end;
+
+  if not Assigned(TargetControl) then Exit;
+
+  pt := TargetControl.ScreenToClient(MousePos);
+
+  if (pt.X >= 0) and (pt.X < TargetControl.Width) and (pt.Y >= 0) and (pt.Y < TargetControl.Height) then
+  begin
+    if WheelDelta > 0 then
+      if TargetControl = FOpenGLControl then
+        SetZoom(Zoom * ZoomFactor)
+      else
+        SetZoomLevel(ZoomLevel * ZoomFactor)
+    else
+      if TargetControl = FOpenGLControl then
+        SetZoom(Zoom / ZoomFactor)
+      else
+        SetZoomLevel(ZoomLevel / ZoomFactor);
+
+    TargetControl.Invalidate;
+  end;
+end;
+
 
 
 
@@ -674,7 +802,10 @@ procedure TForm1.OnClickBoxItemHide(sender : TObject);
       begin
         item := TEditListBoxItem(btn.Parent);
         item.IsGraphHidden := not item.IsGraphHidden;
-        FOpenGLControl.Repaint;
+        if FOpenGLControl.IsCurrent then
+          FOpenGLControl.Repaint
+        else if FOpenGLControl3D.IsCurrent then
+             FOpenGLControl3D.Repaint;
       end;
     end;
   end;
@@ -897,10 +1028,10 @@ procedure TForm1.CalculateAll(sender : Tobject);
                     end;
                 end;
             end;
-            if FOpenGLControl.IsCurrent then
-              FOpenGLControl.Repaint
+            if FOpenGLControl3d.IsCurrent then
+              FOpenGLControl3d.Repaint
             else
-                FOpenGLControl3d.Repaint
+              FOpenGLControl.Repaint;
     finally
       ProgressForm.Close;
       ProgressForm.Free;
