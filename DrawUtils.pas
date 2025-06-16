@@ -98,6 +98,8 @@ end;
 
 
 
+
+
 procedure DrawCoordinate(basefont: Cardinal; zoom : float32);
 var
   i: Integer;

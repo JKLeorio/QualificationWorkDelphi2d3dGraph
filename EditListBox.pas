@@ -19,9 +19,11 @@ type
     destructor Destroy; override;
     procedure OnDeleteClick(Sender: TObject);
 
-    procedure AddEdit;
+    procedure AddEdit(out Item : TEditListBoxItem);
     procedure RemoveEdit(Edit: TEditListBoxItem);
     procedure ClearEdits;
+    procedure LoadEditListBoxFromFile(const FileName: string; clean : Boolean);
+    procedure SaveEditListBoxToFile(const FileName: string);
 
     property ListBoxItems : TObjectList<TEditListBoxItem> read FEditListBoxItems write FEditListBoxItems;
     property Spacing: Integer read FSpacing write FSpacing;
@@ -32,6 +34,50 @@ type
 
 implementation
 
+uses System.JSON, System.IOUtils, Unit1;
+
+procedure TEditListBox.SaveEditListBoxToFile(const FileName: string);
+var
+  JSONArray: TJSONArray;
+  i: Integer;
+  item: TEditListBoxItem;
+  json_data : TJSONObject;
+begin
+  JSONArray := TJSONArray.Create;
+  try
+    for i := 0 to ListBoxItems.Count - 1 do
+    begin
+      item := ListBoxItems[i];
+      item.ToJson(json_data);
+      JSONArray.AddElement(json_data);
+    end;
+
+    TFile.WriteAllText(FileName, JSONArray.ToJSON);
+  finally
+    JSONArray.Free;
+  end;
+end;
+
+procedure TEditListBox.LoadEditListBoxFromFile(const FileName: string; clean : Boolean);
+var
+  JSONArray: TJSONArray;
+  i: Integer;
+  NewItem: TEditListBoxItem;
+  JSONObject: TJSONObject;
+begin
+  JSONArray := TJSONObject.ParseJSONValue(TFile.ReadAllText(FileName)) as TJSONArray;
+  try
+
+    for i := 0 to JSONArray.Count - 1 do
+    begin
+      JSONObject := JSONArray.Items[i] as TJSONObject;
+      AddEdit(NewItem);
+      NewItem.FromJSON(JSONObject);
+    end;
+  finally
+    JSONArray.Free;
+  end;
+end;
 
 
 constructor TEditListBox.Create(AOwner: TComponent);
@@ -50,9 +96,7 @@ begin
   inherited;
 end;
 
-procedure TEditListBox.AddEdit;
-var
-  Item: TEditListBoxItem;
+procedure TEditListBox.AddEdit(out Item : TEditListBoxItem);
 begin
   Item := TEditListBoxItem.Create(Self);
   Item.Parent := Self;
@@ -89,12 +133,15 @@ end;
 procedure TEditListBox.OnDeleteClick(Sender: TObject);
 var
   Edit: TEditListBoxItem;
+  form : TForm1;
 begin
   if Sender is TButton then
   begin
     Edit := TButton(Sender).Parent as TEditListBoxItem;
+    form := GetParentForm(Self) as TForm1;
     if Assigned(Edit) then
     begin
+      form.items_points.Remove(Edit);
       RemoveEdit(Edit);
     end
   end;

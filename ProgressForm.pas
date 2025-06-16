@@ -8,11 +8,9 @@ uses
 
 type
   TForm2 = class(TForm)
-    ProgressBar1: TProgressBar;
     Label1: TLabel;
   private
   public
-    procedure SetProgress(Step: Integer; const Msg: string = '');
   end;
 
 var
@@ -22,14 +20,5 @@ implementation
 
 {$R *.dfm}
 
-
-
-procedure TForm2.SetProgress(Step: Integer; const Msg: string);
-begin
-  ProgressBar1.Position := Step;
-  if Msg <> '' then
-    Label1.Caption := Msg;
-  Application.ProcessMessages;
-end;
 
 end.

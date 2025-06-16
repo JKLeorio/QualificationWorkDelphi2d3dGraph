@@ -2,8 +2,8 @@ object Form1: TForm1
   Left = 0
   Top = 0
   Caption = 'Form1'
-  ClientHeight = 768
-  ClientWidth = 1149
+  ClientHeight = 705
+  ClientWidth = 1147
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -17,45 +17,48 @@ object Form1: TForm1
   object PageControl1: TPageControl
     Left = 0
     Top = 0
-    Width = 1149
-    Height = 768
+    Width = 1147
+    Height = 705
     ActivePage = TabSheet1
     Align = alClient
     TabOrder = 0
     OnChange = pagecontrolchange
-    ExplicitHeight = 748
+    ExplicitWidth = 1149
+    ExplicitHeight = 768
     object TabSheet1: TTabSheet
       Caption = '2D'
       object Panel2: TPanel
         Left = 0
         Top = 0
         Width = 357
-        Height = 657
+        Height = 594
         Align = alLeft
         BorderStyle = bsSingle
         TabOrder = 0
-        ExplicitHeight = 637
+        ExplicitHeight = 657
       end
       object Panel1: TPanel
-        Left = 361
+        Left = 363
         Top = 0
-        Width = 780
-        Height = 657
+        Width = 776
+        Height = 594
         Align = alRight
         Anchors = [akLeft, akTop, akRight, akBottom]
         BorderStyle = bsSingle
         TabOrder = 1
-        ExplicitHeight = 637
+        ExplicitWidth = 778
+        ExplicitHeight = 657
       end
       object Panel5: TPanel
         Left = 0
-        Top = 657
-        Width = 1141
+        Top = 594
+        Width = 1139
         Height = 81
         Align = alBottom
         BorderStyle = bsSingle
         TabOrder = 2
-        ExplicitTop = 637
+        ExplicitTop = 657
+        ExplicitWidth = 1141
         object Panel6: TPanel
           Left = 1
           Top = 1
@@ -97,12 +100,13 @@ object Form1: TForm1
           end
         end
         object Panel7: TPanel
-          Left = 361
+          Left = 359
           Top = 1
           Width = 775
           Height = 75
           Align = alRight
           TabOrder = 1
+          ExplicitLeft = 361
           object Button1: TButton
             Left = 536
             Top = 1
@@ -157,42 +161,41 @@ object Form1: TForm1
       Caption = '3D'
       ImageIndex = 1
       object Panel3: TPanel
-        Left = 362
+        Left = 364
         Top = 0
-        Width = 779
-        Height = 652
+        Width = 775
+        Height = 589
         Align = alRight
         Anchors = [akLeft, akTop, akRight, akBottom]
         BorderStyle = bsSingle
         TabOrder = 0
-        ExplicitLeft = 360
-        ExplicitTop = -3
-        ExplicitHeight = 605
+        ExplicitWidth = 777
+        ExplicitHeight = 652
       end
       object Panel4: TPanel
         Left = 0
         Top = 0
         Width = 354
-        Height = 652
+        Height = 589
         Align = alLeft
         BorderStyle = bsSingle
         ParentBackground = False
         TabOrder = 1
-        ExplicitHeight = 632
+        ExplicitHeight = 652
       end
       object Panel8: TPanel
         Left = 0
-        Top = 652
-        Width = 1141
+        Top = 589
+        Width = 1139
         Height = 86
         Align = alBottom
         BorderStyle = bsSingle
         TabOrder = 2
-        ExplicitTop = 632
+        ExplicitTop = 595
         object Panel9: TPanel
-          Left = 358
+          Left = 362
           Top = 1
-          Width = 778
+          Width = 772
           Height = 80
           Align = alRight
           BorderStyle = bsSingle
@@ -200,7 +203,7 @@ object Form1: TForm1
           object Button11: TButton
             Left = 1
             Top = 1
-            Width = 216
+            Width = 214
             Height = 74
             Align = alLeft
             Caption = 'XZ'
@@ -212,11 +215,12 @@ object Form1: TForm1
             ParentFont = False
             TabOrder = 0
             OnClick = BtnViewXZClick
+            ExplicitLeft = 0
           end
           object Button9: TButton
-            Left = 217
+            Left = 215
             Top = 1
-            Width = 239
+            Width = 235
             Height = 74
             Align = alClient
             Caption = 'YZ'
@@ -228,10 +232,11 @@ object Form1: TForm1
             ParentFont = False
             TabOrder = 1
             OnClick = BtnViewYZClick
-            ExplicitLeft = 193
+            ExplicitLeft = 217
+            ExplicitWidth = 239
           end
           object Button8: TButton
-            Left = 675
+            Left = 669
             Top = 1
             Width = 98
             Height = 74
@@ -244,9 +249,10 @@ object Form1: TForm1
             Font.Style = []
             ParentFont = False
             TabOrder = 2
+            ExplicitLeft = 675
           end
           object Button10: TButton
-            Left = 456
+            Left = 450
             Top = 1
             Width = 219
             Height = 74
@@ -260,19 +266,20 @@ object Form1: TForm1
             ParentFont = False
             TabOrder = 3
             OnClick = BtnViewXYClick
+            ExplicitLeft = 456
           end
         end
         object Panel10: TPanel
           Left = 1
           Top = 1
-          Width = 351
+          Width = 349
           Height = 80
           Align = alLeft
           TabOrder = 1
           object Button5: TButton
             Left = 1
             Top = 1
-            Width = 349
+            Width = 347
             Height = 43
             Align = alTop
             Caption = #1044#1086#1073#1072#1074#1080#1090#1100' '#1075#1088#1072#1092#1080#1082
@@ -284,11 +291,12 @@ object Form1: TForm1
             ParentFont = False
             TabOrder = 0
             OnClick = AddEditListBoxItem3d
+            ExplicitWidth = 349
           end
           object Button4: TButton
             Left = 1
             Top = 40
-            Width = 349
+            Width = 347
             Height = 39
             Align = alBottom
             Caption = #1042#1099#1095#1080#1089#1083#1080#1090#1100' '#1074#1089#1105
@@ -300,6 +308,7 @@ object Form1: TForm1
             ParentFont = False
             TabOrder = 1
             OnClick = CalculateAll
+            ExplicitWidth = 349
           end
         end
       end
